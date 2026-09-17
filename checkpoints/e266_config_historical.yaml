@@ -1,0 +1,105 @@
+sample_rate: 16000
+dataset_type: echoset
+model:
+  module: models.gtcrn_ss_noncausal_M2_stepbound
+  class: GTCRN_SS_NonCausal_M2_StepBound
+  name: M2 bounded router step embedding (EchoSet)
+network_config:
+  n_fft: 512
+  hop_len: 256
+  win_len: 512
+  num_sources: 2
+  apply_mask_constraint: true
+  hidden_channels: 72
+  freq_downsample_layers: 1
+  stft_center: true
+  architecture_version: m2_stepbound_v1
+  mask_head_type: latent_additive
+  paired_m0_initialization: true
+  num_refinement_steps: 4
+  max_refinement_steps: 4
+  step_embedding_max_norm: 0.15
+  moe_enabled: true
+  num_experts: 6
+  moe_top_k: 1
+  moe_expert_width: 96
+  moe_dropout: 0.0
+  router_dim: 24
+  router_temperature_init: 0.7
+  router_temperature_min: 0.1
+  router_temperature_max: 2.0
+  moe_strength_init: 0.03
+  moe_strength_max: 0.5
+  step_balance_ratio: 0.1
+  mask_head_channels: 24
+  noise_sink: true
+  saf_r_blend_init: 0.05
+  saf_r_candidate_scale_init: 0.0
+  observation_scale_init: 0.1
+  observation_phase_floor_ratio: 0.01
+  num_latent_atoms: 6
+  atom_residual_scale: 0.1
+  latent_additive_residual_scale_init: 0.1
+  latent_additive_residual_scale_max: 0.5
+  router_z_loss_weight: 0.001
+  prototype_orthogonality_weight: 0.001
+  responsibility_entropy_weight: 0.0
+  responsibility_utilization_weight: 0.0
+  responsibility_utilization_floor: 0.01
+  complex_residual_weight: 0.0
+loss:
+  type: tiger
+  kwargs:
+    use_snr: true
+    lambda_snr: 1.0
+    lambda_stft: 0.0
+    use_freq_wav_loss: true
+    lambda_freq_wav: 1.0
+  wrapper:
+    enabled: true
+    type: pit_aux_balance
+    balance_loss_weight: 0.001
+train_dataset:
+  data_dir: /home/lab101/Desktop/GTCRN/EchoSet/train
+  sample_rate: 16000
+  segment: 3.0
+  num_sources: 2
+  normalize: false
+  random_start: true
+train_dataloader:
+  batch_size: 4
+  num_workers: 0
+  pin_memory: true
+validation_dataset:
+  data_dir: /home/lab101/Desktop/GTCRN/EchoSet/val
+  sample_rate: 16000
+  segment: null
+  num_sources: 2
+  normalize: false
+  random_start: false
+validation_dataloader:
+  batch_size: 1
+  num_workers: 0
+  pin_memory: true
+evaluation:
+  validation_bss_sdr: false
+optimizer:
+  lr: 0.001
+  weight_decay: 0.0
+scheduler:
+  type: plateau
+  factor: 0.5
+  patience: 10
+  threshold: 0.0001
+  threshold_mode: abs
+  verbose: true
+trainer:
+  epochs: 500
+  save_checkpoint_interval: 1
+  clip_grad_norm_value: 5.0
+  resume: true
+  resume_datetime: 2026-08-16-17h42m05s-048318-64d5a962
+  exp_path: exp/gtcrn_ss_noncausal_M2_stepbound_echoset
+  early_stop_patience: 20
+DDP:
+  world_size: 1

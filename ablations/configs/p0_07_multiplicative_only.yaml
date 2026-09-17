@@ -1,0 +1,15 @@
+id: p0_07_multiplicative_only
+priority: P0
+claim: mixture_closed_reconstruction
+control: direct_removal
+formal_use: primary
+base_config: ../../configs/seal_small_echoset.yaml
+question: Does the conserved additive complex residual escape the multiplicative-mask cancellation ceiling?
+comparison: p0_00_full_m1_stepbound
+overrides:
+  model:
+    name: "ABLATION P0-07 | Multiplicative latent mask only"
+  network_config:
+    mask_head_type: m0_latent_control
+  trainer:
+    exp_path: exp/ablation_m1_stepbound/p0_07_multiplicative_only

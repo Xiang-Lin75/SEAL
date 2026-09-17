@@ -1,0 +1,136 @@
+sample_rate: 16000
+dataset_type: echoset
+
+model:
+  module: models.gtcrn_ss_noncausal_M1_core
+  class: GTCRN_SS_NonCausal_M1_Core
+  name: "M1-Core M0+ latent/additive separator (EchoSet)"
+
+# Keep the M0-controlled capacity and experiment axes fixed.  M1 changes the
+# internal graph under this constructor contract; it does not enlarge C, R,
+# E, top-k, expert width, router dimension, or mask-head width.
+network_config:
+  n_fft: 512
+  hop_len: 256
+  win_len: 512
+  num_sources: 2
+  apply_mask_constraint: true
+  hidden_channels: 72
+  freq_downsample_layers: 1
+  stft_center: true
+  architecture_version: m1_core_radr_latent_additive_v1
+  mask_head_type: latent_additive
+  # Pair only randomly initialized operators whose M0/M1 semantics are
+  # identical. This includes the complete six-atom M0 mask; the M1-only
+  # SAFR/RADR/observation/additive-residual parameters remain fresh.
+  paired_m0_initialization: true
+  num_refinement_steps: 4
+  # RADR and SAFR own step-indexed parameters up to this fixed ceiling.
+  max_refinement_steps: 4
+  moe_enabled: true
+  num_experts: 6
+  moe_top_k: 1
+  moe_expert_width: 96
+  moe_dropout: 0.0
+  router_dim: 24
+  router_temperature_init: 0.7
+  router_temperature_min: 0.1
+  router_temperature_max: 2.0
+  # RADR separates hard expert identity from bounded correction strength.
+  moe_strength_init: 0.03
+  moe_strength_max: 0.5
+  step_balance_ratio: 0.1
+  mask_head_channels: 24
+  noise_sink: true
+
+  # Step-aware anchor/state fusion; the candidate path starts as an identity-
+  # safe zero residual while the blend gives a small previous-state update.
+  saf_r_blend_init: 0.05
+  saf_r_candidate_scale_init: 0.0
+
+  # Reliability-gated full-band observation adapter followed by the complete
+  # M0 latent mask and a zero-initialized additive cancellation correction.
+  observation_scale_init: 0.1
+  observation_phase_floor_ratio: 0.01
+  num_latent_atoms: 6
+  atom_residual_scale: 0.1
+  latent_additive_residual_scale_init: 0.1
+  latent_additive_residual_scale_max: 0.5
+
+  router_z_loss_weight: 0.001
+  prototype_orthogonality_weight: 0.001
+  responsibility_entropy_weight: 0.0
+  responsibility_utilization_weight: 0.0
+  responsibility_utilization_floor: 0.01
+  complex_residual_weight: 0.0
+
+# Training, validation, loss, and optimization settings intentionally match
+# the M0 EchoSet experiment; only the model graph and experiment path differ.
+loss:
+  type: tiger
+  kwargs:
+    use_snr: true
+    lambda_snr: 1.0
+    lambda_stft: 0.0
+    use_freq_wav_loss: true
+    lambda_freq_wav: 1.0
+  wrapper:
+    enabled: true
+    type: pit_aux_balance
+    balance_loss_weight: 0.001
+
+train_dataset:
+  data_dir: ${oc.env:ECHOSET_ROOT}/train
+  sample_rate: 16000
+  segment: 3.0
+  num_sources: 2
+  normalize: false
+  random_start: true
+
+train_dataloader:
+  batch_size: 4
+  num_workers: 0
+  pin_memory: true
+
+validation_dataset:
+  data_dir: ${oc.env:ECHOSET_ROOT}/val
+  sample_rate: 16000
+  segment: null
+  num_sources: 2
+  normalize: false
+  random_start: false
+
+validation_dataloader:
+  batch_size: 1
+  num_workers: 0
+  pin_memory: true
+
+# Validation uses TIGER-parity no-zero-mean SI-SDR.  The 512-tap BSS-SDR
+# calculation remains reserved for final test evaluation because it is costly
+# over the complete validation set.
+evaluation:
+  validation_bss_sdr: false
+
+optimizer:
+  lr: 0.001
+  weight_decay: 0.0
+
+scheduler:
+  type: plateau
+  factor: 0.5
+  patience: 10
+  threshold: 0.0001
+  threshold_mode: abs
+  verbose: true
+
+trainer:
+  epochs: 500
+  save_checkpoint_interval: 1
+  clip_grad_norm_value: 5.0
+  resume: false
+  resume_datetime: ""
+  exp_path: exp/m1_core_echoset
+  early_stop_patience: 20
+
+DDP:
+  world_size: 1

@@ -1,0 +1,17 @@
+id: p0_09_single_latent_atom
+priority: P0
+claim: latent_allocation
+control: structural_collapse
+formal_use: primary
+base_config: ../../configs/seal_small_echoset.yaml
+question: Do multiple latent occupancy-ownership modes improve reconstruction over the mixture-closed single-atom limit?
+comparison: p0_00_full_m1_stepbound
+overrides:
+  model:
+    name: "ABLATION P0-09 | Single latent allocation atom"
+  network_config:
+    # M=1 makes occupancy identically one while retaining ownership, the
+    # centered complex base proposal, additive correction and exact closure.
+    num_latent_atoms: 1
+  trainer:
+    exp_path: exp/ablation_m1_stepbound/p0_09_single_latent_atom

@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use SEAL, please cite the accompanying paper and this software."
+title: "SEAL: Mixture-Closed Reconstruction and Refinement-Aware Routing for Speech Separation"
+type: software
+version: 0.1.0
+date-released: 2026-09-17
+url: "https://github.com/Xiang-Lin75/SEAL"
+repository-code: "https://github.com/Xiang-Lin75/SEAL"
+license: MIT
+authors:
+  - family-names: Hu
+    given-names: Shao-Chun
+  - family-names: Lin
+    given-names: Zi-Xiang
+  - family-names: Hung
+    given-names: Jeih-Weih
+  - family-names: Lee
+    given-names: Hung-Shin

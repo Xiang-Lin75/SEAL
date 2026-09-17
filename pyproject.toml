@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seal-speech-separation"
+version = "0.1.0"
+description = "SEAL: mixture-closed reconstruction and refinement-aware routing for speech separation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+  {name = "SEAL Authors"}
+]
+dependencies = [
+  "fast_bss_eval==0.1.4",
+  "numpy>=1.26",
+  "omegaconf>=2.3",
+  "ptflops==0.7.3",
+  "soundfile>=0.12",
+  "tensorboard>=2.16",
+  "torch>=2.6",
+  "tqdm>=4.66",
+]
+
+[project.urls]
+Repository = "https://github.com/Xiang-Lin75/SEAL"
+Issues = "https://github.com/Xiang-Lin75/SEAL/issues"
+
+[tool.setuptools]
+py-modules = ["dataloader_echoset", "dataloader_libri2mix", "distributed_utils", "loss_ss", "metrics_ss", "scheduler"]
+
+[tool.setuptools.packages.find]
+include = ["models*", "entrypoints*", "scripts*", "ablations*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

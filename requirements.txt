@@ -1,0 +1,10 @@
+fast_bss_eval==0.1.4
+numpy>=1.26
+omegaconf>=2.3
+ptflops==0.7.3
+pesq==0.0.4
+pystoi==0.4.1
+soundfile>=0.12
+tensorboard>=2.16
+torch>=2.6
+tqdm>=4.66

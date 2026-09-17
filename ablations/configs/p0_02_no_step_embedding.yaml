@@ -1,0 +1,18 @@
+id: p0_02_no_step_embedding
+priority: P0
+claim: bounded_router_step_embedding
+control: direct_removal
+formal_use: primary
+base_config: ../../configs/seal_small_echoset.yaml
+question: Is bounded router-step identity better than deleting the router step embedding entirely?
+comparison: p0_00_full_m1_stepbound
+overrides:
+  model:
+    module: ablations.models.m1_stepbound_ablation
+    class: GTCRN_SS_NonCausal_M1_StepBound_Ablation
+    name: "ABLATION P0-02 | No router step embedding"
+  network_config:
+    ablation_id: p0_02_no_step_embedding
+    router_step_signal: no_embedding
+  trainer:
+    exp_path: exp/ablation_m1_stepbound/p0_02_no_step_embedding

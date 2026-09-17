@@ -1,0 +1,20 @@
+id: p1_20_no_progress_router_evidence
+priority: P1
+claim: refinement_aware_routing
+control: nested_removal
+formal_use: mechanism
+base_config: ../../configs/seal_small_echoset.yaml
+question: Do delta and trajectory evidence improve refinement-aware routing over otherwise identical RADR?
+comparison: p0_00_full_m1_stepbound,p0_08_no_refinement_delta
+overrides:
+  model:
+    module: ablations.models.m1_stepbound_ablation
+    class: GTCRN_SS_NonCausal_M1_StepBound_Ablation
+    name: "ABLATION P1-20 | No delta or trajectory identity evidence"
+  network_config:
+    ablation_id: p1_20_no_progress_router_evidence
+    # Retain local, anchor, global and bounded step cues; remove only the two
+    # branches that describe refinement progress from expert-identity routing.
+    router_evidence_mode: no_progress
+  trainer:
+    exp_path: exp/ablation_m1_stepbound/p1_20_no_progress_router_evidence
