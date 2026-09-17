@@ -508,7 +508,6 @@ class TestM1Model(unittest.TestCase):
         config_path = (
             REPOSITORY_ROOT
             / "configs"
-            / "m1"
             / "m1_core_echoset.yaml"
         )
         config = OmegaConf.load(config_path)

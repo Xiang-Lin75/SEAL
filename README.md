@@ -49,7 +49,7 @@ wheel first and then run `pip install -e .`.
 
 ## Pretrained checkpoint and inference
 
-Download `seal-small-e266.tar` from the `v0.1.0` GitHub release into
+Download `seal-small-e266.tar` from the latest GitHub release into
 `checkpoints/`. Verify the SHA-256 shown in
 [`checkpoints/README.md`](checkpoints/README.md), then run:
 
