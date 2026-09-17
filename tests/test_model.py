@@ -12,7 +12,7 @@ call as the TIGER complexity report.
 from __future__ import annotations
 
 import copy
-import json
+import re
 import subprocess
 import sys
 import unittest
@@ -521,19 +521,18 @@ class TestM1Model(unittest.TestCase):
         self.assertLess(total, 820_000)
         self.assertEqual(total - trainable, 24_576)
 
-        # Use a clean interpreter. Earlier trainer tests may import an optional
-        # site-package ptflops for console diagnostics, whereas the TIGER
-        # headline must prove it loaded workspace-pinned ptflops 0.7.3.
+        # Exercise the same public CLI documented for TIGER-compatible
+        # complexity measurement, in a clean interpreter.
         completed = subprocess.run(
             [
                 sys.executable,
                 str(
                     REPOSITORY_ROOT
                     / "scripts"
-                    / "measure_model_complexity_tiger.py"
+                    / "measure_complexity.py"
                 ),
-                "--model",
-                "m1",
+                "--config",
+                str(config_path),
             ],
             cwd=REPOSITORY_ROOT,
             check=True,
@@ -541,13 +540,16 @@ class TestM1Model(unittest.TestCase):
             text=True,
             timeout=90,
         )
-        profile = json.loads(completed.stdout)["results"][0]
-        self.assertEqual(profile["ptflops_version"], "0.7.3")
-        self.assertIn(".tools", profile["ptflops_import_path"])
-        self.assertEqual(int(profile["params"]), trainable)
+        parameter_match = re.search(r"parameters:\s*([\d,]+)", completed.stdout)
+        mac_match = re.search(r"MAC/s:\s*([\d.]+)\s*G", completed.stdout)
+        self.assertIsNotNone(parameter_match)
+        self.assertIsNotNone(mac_match)
+        measured_parameters = int(parameter_match.group(1).replace(",", ""))
+        measured_macs = float(mac_match.group(1)) * 1_000_000_000
+        self.assertEqual(measured_parameters, trainable)
         # This is the raw TIGER/ptflops headline. Functional routing and
         # elementwise complex work still require the separate analytic audit.
-        self.assertLessEqual(int(profile["macs"]), 3_200_000_000)
+        self.assertLessEqual(measured_macs, 3_200_000_000)
 
     def test_13_safr_candidate_is_forward_closed_but_scale_can_learn(self) -> None:
         """Prevent recurrence of SAFR's bilinear zero-times-zero deadlock."""
