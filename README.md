@@ -1,6 +1,6 @@
 # SEAL
 
-**Sparse Expert readout with Additive Latent reconstruction** for compact,
+**Sparse Expert routing with Additive Latent reconstruction** for compact,
 non-causal, single-channel speech separation.
 
 SEAL combines three design ideas:
