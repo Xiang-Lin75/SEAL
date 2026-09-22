@@ -37,7 +37,7 @@ EXPECTED_CONFIG_SHA256 = (
 HISTORICAL_MODULE = "models.gtcrn_ss_noncausal_M2_stepbound"
 HISTORICAL_CLASS = "GTCRN_SS_NonCausal_M2_StepBound"
 HISTORICAL_ARCHITECTURE = "m2_stepbound_v1"
-CANONICAL_MODULE = "models.gtcrn_ss_noncausal_M1_stepbound"
+CANONICAL_MODULE = "models.seal"
 CANONICAL_CLASS = "GTCRN_SS_NonCausal_M1_StepBound"
 CANONICAL_ARCHITECTURE = "m1_stepbound_v1"
 
@@ -234,7 +234,7 @@ def construct_e266_model(
         network = historical_network
         constructed_identity = identity["historical_identity"]
     else:
-        from models.gtcrn_ss_noncausal_M1_stepbound import (
+        from models.seal import (
             GTCRN_SS_NonCausal_M1_StepBound,
         )
 

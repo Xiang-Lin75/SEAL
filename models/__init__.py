@@ -1,6 +1,6 @@
 """Public SEAL model exports."""
 
-from .gtcrn_ss_noncausal_M1_stepbound import (
+from .seal import (
     GTCRN_SS_NonCausal_M1_StepBound,
     NormClippedStepEmbedding,
 )

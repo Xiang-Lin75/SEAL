@@ -44,7 +44,7 @@ except ModuleNotFoundError as error:  # pragma: no cover - environment guard.
 
 if torch is not None:
     from models.gtcrn_ss_noncausal_M1_core import GTCRN_SS_NonCausal_M1_Core
-    from models.gtcrn_ss_noncausal_M1_stepbound import (
+    from models.seal import (
         GTCRN_SS_NonCausal_M1_StepBound,
         NormClippedStepEmbedding,
     )
