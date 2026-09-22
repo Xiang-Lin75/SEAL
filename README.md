@@ -1,6 +1,6 @@
 # SEAL
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xiang-Lin75/SEAL/blob/main/notebooks/SEAL_inference_demo.ipynb)
+
 [![Audio Demo](https://img.shields.io/badge/Audio-Demo-blue)](https://Xiang-Lin75.github.io/SEAL/)
 
 **Sparse Expert routing with Additive Latent reconstruction** for compact,
