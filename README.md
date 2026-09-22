@@ -15,7 +15,9 @@ SEAL combines three design ideas:
    additive complex correction and a residual sink that preserves mixture
    closure.
 
-![Architecture](assets/architecture.pdf)
+![Architecture](assets/fig1_seal.pdf)
+
+![Readout](assets/fig2_readout.pdf)
 
 ## Release contents
 
