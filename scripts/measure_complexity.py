@@ -15,6 +15,8 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=Path("configs/seal_small_echoset.yaml"))
     args = parser.parse_args()
     config = OmegaConf.load(args.config)
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     module = importlib.import_module(str(config.model.module))
     cls = getattr(module, str(config.model["class"]))
     model = cls(**OmegaConf.to_container(config.network_config, resolve=True)).eval()

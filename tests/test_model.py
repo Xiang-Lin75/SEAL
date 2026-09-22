@@ -37,7 +37,7 @@ except ModuleNotFoundError as error:
 
 
 if torch is not None:
-    from models.gtcrn_ss_noncausal_M1_core import (
+    from models.seal import (
         BaselineCompatibleSAFR,
         ConservedLatentAdditiveResidualHead,
         ConservedSpectralResidualHead,
@@ -45,7 +45,7 @@ if torch is not None:
         GTCRN_SS_NonCausal_M1_Core,
         RefinementAwareDynamicRouter,
     )
-    from models.gtcrn_ss_noncausal_M0_shared_recursive_moe_latent import (
+    from models.seal import (
         ConservationStructuredLatentAtomHead,
         GTCRN_SS_NonCausal_M0_SharedRecursive_MoE_Latent,
     )

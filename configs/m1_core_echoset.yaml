@@ -2,7 +2,7 @@ sample_rate: 16000
 dataset_type: echoset
 
 model:
-  module: models.gtcrn_ss_noncausal_M1_core
+  module: models.seal
   class: GTCRN_SS_NonCausal_M1_Core
   name: "M1-Core M0+ latent/additive separator (EchoSet)"
 
