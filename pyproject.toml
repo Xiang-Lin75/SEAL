@@ -27,11 +27,8 @@ dependencies = [
 Repository = "https://github.com/Xiang-Lin75/SEAL"
 Issues = "https://github.com/Xiang-Lin75/SEAL/issues"
 
-[tool.setuptools]
-py-modules = ["dataloader_echoset", "distributed_utils", "loss_ss", "metrics_ss", "scheduler"]
-
 [tool.setuptools.packages.find]
-include = ["models*", "entrypoints*", "scripts*"]
+include = ["seal*", "entrypoints*", "scripts*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

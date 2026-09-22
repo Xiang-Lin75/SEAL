@@ -11,7 +11,7 @@ try:
     import soundfile as sf
     import torch
 
-    from dataloader_echoset import EchoSetDataset
+    from seal.data.dataloader_echoset import EchoSetDataset
 except ImportError as exc:  # pragma: no cover - exercised in minimal environments
     sf = None
     torch = None
@@ -180,7 +180,7 @@ class TestEchoSetDataset(unittest.TestCase):
             segment=0.01,
             random_start=True,
         )
-        with mock.patch("dataloader_echoset.np.random.randint", return_value=7) as draw:
+        with mock.patch("seal.data.dataloader_echoset.np.random.randint", return_value=7) as draw:
             dataset[0]
         draw.assert_called_once_with(0, 81)
         with self.assertRaisesRegex(RuntimeError, "crop_seed"):

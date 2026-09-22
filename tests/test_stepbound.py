@@ -43,8 +43,8 @@ except ModuleNotFoundError as error:  # pragma: no cover - environment guard.
     _DEPENDENCY_ERROR = str(error)
 
 if torch is not None:
-    from models.seal import GTCRN_SS_NonCausal_M1_Core
-    from models.seal import (
+    from seal.models.seal import GTCRN_SS_NonCausal_M1_Core
+    from seal.models.seal import (
         GTCRN_SS_NonCausal_M1_StepBound,
         NormClippedStepEmbedding,
     )

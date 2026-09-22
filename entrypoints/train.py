@@ -32,25 +32,25 @@ while str(ABALATION_DIR) in sys.path:
     sys.path.remove(str(ABALATION_DIR))
 sys.path.insert(0, str(ABALATION_DIR))
 
-from dataloader_echoset import EchoSetDataset
+from seal.data.dataloader_echoset import EchoSetDataset
 
 
-from loss_ss import (
+from seal.losses.loss_ss import (
     PITAuxBalanceWrapper,
     PITHybridLoss,
     PITSISNRLoss,
     PITSNRLoss,
     PITTigerLoss,
 )
-from metrics_ss import pit_si_sdr, separation_metrics, si_sdr, snr
+from seal.metrics.metrics_ss import pit_si_sdr, separation_metrics, si_sdr, snr
 
 try:
-    from scheduler import LinearWarmupCosineAnnealingLR as WarmupLR
+    from seal.utils.scheduler import LinearWarmupCosineAnnealingLR as WarmupLR
 except ImportError:
     WarmupLR = None
 
 try:
-    from distributed_utils import reduce_value
+    from seal.utils.distributed_utils import reduce_value
 except ImportError:
     def reduce_value(value):
         return value

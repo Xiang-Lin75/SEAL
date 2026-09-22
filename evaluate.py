@@ -8,9 +8,9 @@ from pathlib import Path
 
 import torch
 
-from dataloader_echoset import EchoSetDataset
+from seal.data.dataloader_echoset import EchoSetDataset
 from inference import load_model
-from metrics_ss import pit_si_sdr
+from seal.metrics.metrics_ss import pit_si_sdr
 
 
 def main() -> None:

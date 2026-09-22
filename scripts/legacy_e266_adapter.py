@@ -176,7 +176,7 @@ class LegacyE266NormClippedStepEmbedding(nn.Module):
 def historical_model_class():
     """Build the retired class locally without reopening the M2 model line."""
 
-    from models.seal import GTCRN_SS_NonCausal_M1_Core
+    from seal.models.seal import GTCRN_SS_NonCausal_M1_Core
 
     class LegacyE266HistoricalStepBound(GTCRN_SS_NonCausal_M1_Core):
         def __init__(
@@ -234,7 +234,7 @@ def construct_e266_model(
         network = historical_network
         constructed_identity = identity["historical_identity"]
     else:
-        from models.seal import (
+        from seal.models.seal import (
             GTCRN_SS_NonCausal_M1_StepBound,
         )
 

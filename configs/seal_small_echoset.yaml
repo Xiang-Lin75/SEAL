@@ -2,7 +2,7 @@ sample_rate: 16000
 dataset_type: echoset
 
 model:
-  module: models.seal
+  module: seal.models.seal
   class: GTCRN_SS_NonCausal_M1_StepBound
   name: "SEAL-small (EchoSet)"
 
