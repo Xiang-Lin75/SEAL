@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEAL: Speech Separation Demo</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        h1, h2 { text-align: center; }
+        .authors { text-align: center; font-style: italic; margin-bottom: 20px; }
+        .links { text-align: center; margin-bottom: 40px; }
+        .links a { margin: 0 10px; text-decoration: none; color: #0366d6; border: 1px solid #0366d6; padding: 5px 10px; border-radius: 5px; }
+        .links a:hover { background: #0366d6; color: #fff; }
+        .abstract { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 40px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        th, td { border: 1px solid #ddd; padding: 15px; text-align: center; vertical-align: middle; }
+        th { background-color: #f8f9fa; font-weight: 600; color: #333; }
+        audio { width: 200px; outline: none; }
+        .sample-title { font-weight: bold; text-align: left; background-color: #fcfcfc; }
+    </style>
+</head>
+<body>
+
+    <h1>SEAL: Sparse Expert Routing with Additive Latent Reconstruction</h1>
+    <h2>for Compact, Non-causal, Single-channel Speech Separation</h2>
+    
+    <!-- 您可以在這裡補上共同作者的名稱 -->
+    <div class="authors">
+        <p>Xiang-Lin75 et al.</p>
+    </div>
+
+    <div class="links">
+        <a href="https://github.com/Xiang-Lin75/SEAL">GitHub Repository</a>
+        <!-- 如果有 arXiv 連結可以換掉下面的 # -->
+        <a href="#">Paper (arXiv)</a>
+    </div>
+
+    <div class="abstract">
+        <strong>Abstract:</strong>
+        SEAL combines three design ideas for compact and efficient speech separation: 
+        (1) a shared-weight DPGRNN cell that iteratively updates a feature state; 
+        (2) refinement-aware Top-1 routing over stateless residual experts; 
+        (3) conservation-structured six-atom latent reconstruction with a bounded additive complex correction.
+        The result is a highly competitive model for single-channel speech separation.
+    </div>
+
+    <h2>Audio Samples (EchoSet / Libri2Mix)</h2>
+    <p>All examples below demonstrate the separation of two overlapping speakers from a single-channel mixture. Please use headphones for the best experience.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Sample ID</th>
+                <th>Mixture (Input)</th>
+                <th>Clean Sources (Ground Truth)</th>
+                <th>SEAL Separation (Output)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Sample 1 -->
+            <tr>
+                <td rowspan="2" class="sample-title">Example 1 (Female + Male)</td>
+                <td rowspan="2">
+                    <audio controls controlsList="nodownload"><source src="audio/ex1_mix.wav" type="audio/wav"></audio>
+                </td>
+                <td>Source 1:<br><audio controls controlsList="nodownload"><source src="audio/ex1_s1_clean.wav" type="audio/wav"></audio></td>
+                <td><strong>SEAL Source 1:</strong><br><audio controls controlsList="nodownload"><source src="audio/ex1_s1_seal.wav" type="audio/wav"></audio></td>
+            </tr>
+            <tr>
+                <td>Source 2:<br><audio controls controlsList="nodownload"><source src="audio/ex1_s2_clean.wav" type="audio/wav"></audio></td>
+                <td><strong>SEAL Source 2:</strong><br><audio controls controlsList="nodownload"><source src="audio/ex1_s2_seal.wav" type="audio/wav"></audio></td>
+            </tr>
+
+            <!-- Sample 2 -->
+            <tr>
+                <td rowspan="2" class="sample-title">Example 2 (Male + Male)</td>
+                <td rowspan="2">
+                    <audio controls controlsList="nodownload"><source src="audio/ex2_mix.wav" type="audio/wav"></audio>
+                </td>
+                <td>Source 1:<br><audio controls controlsList="nodownload"><source src="audio/ex2_s1_clean.wav" type="audio/wav"></audio></td>
+                <td><strong>SEAL Source 1:</strong><br><audio controls controlsList="nodownload"><source src="audio/ex2_s1_seal.wav" type="audio/wav"></audio></td>
+            </tr>
+            <tr>
+                <td>Source 2:<br><audio controls controlsList="nodownload"><source src="audio/ex2_s2_clean.wav" type="audio/wav"></audio></td>
+                <td><strong>SEAL Source 2:</strong><br><audio controls controlsList="nodownload"><source src="audio/ex2_s2_seal.wav" type="audio/wav"></audio></td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

@@ -1,5 +1,8 @@
 # SEAL
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Xiang-Lin75/SEAL/blob/main/notebooks/SEAL_inference_demo.ipynb)
+[![Audio Demo](https://img.shields.io/badge/Audio-Demo-blue)](https://Xiang-Lin75.github.io/SEAL/)
+
 **Sparse Expert routing with Additive Latent reconstruction** for compact,
 non-causal, single-channel speech separation.
 
@@ -22,7 +25,6 @@ This repository provides more than the minimum code-only release:
 - EchoSet and Libri2Mix data loaders;
 - training losses, TIGER-compatible SI-SDRi evaluation, and a trainer;
 - inference and evaluation commands;
-- the seven configurations in the compact ICASSP ablation table;
 - model invariant, dataloader, and metric tests;
 - a model card, reproducibility guide, citation metadata, CI, security notes,
   and third-party attribution;
@@ -101,20 +103,6 @@ row per utterance before printing the mean; this enables paired comparisons.
 
 This is one historical validation-selected E266 run, not a multi-seed estimate.
 See [`MODEL_CARD.md`](MODEL_CARD.md) for metric definitions and limitations.
-
-## Ablations
-
-[`ablations/README.md`](ablations/README.md) maps every paper row to one causal
-question. The core table tests additive reconstruction, atom factorization,
-expert capacity, learned routing, progress evidence, and the step cue. It does
-not claim that the chosen Top-K, number of experts, number of atoms, or bound is
-globally optimal.
-
-```bash
-python -m ablations.run \
-  --arm ablations/configs/p0_07_multiplicative_only.yaml \
-  --device 0
-```
 
 ## Repository layout
 
