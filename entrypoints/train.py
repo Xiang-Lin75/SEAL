@@ -33,8 +33,8 @@ while str(ABALATION_DIR) in sys.path:
 sys.path.insert(0, str(ABALATION_DIR))
 
 from dataloader_echoset import EchoSetDataset
-from dataloader_libri2mix import Libri2MixDataset
-from dataloader_wham import WHAMDataset
+
+
 from loss_ss import (
     PITAuxBalanceWrapper,
     PITHybridLoss,
@@ -269,9 +269,7 @@ def _run_worker(rank, config, args):
     dataset_type = str(config.get("dataset_type", "libri2mix")).lower()
     dataset_classes = {
         "echoset": EchoSetDataset,
-        "libri2mix": Libri2MixDataset,
-        "wham": WHAMDataset,
-        "whamr": WHAMDataset,
+
     }
     try:
         DatasetClass = dataset_classes[dataset_type]
