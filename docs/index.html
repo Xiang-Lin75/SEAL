@@ -1,107 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEAL: Speech Separation Demo</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; }
-        h1, h2 { text-align: center; }
-        .authors { text-align: center; font-style: italic; margin-bottom: 20px; }
-        .links { text-align: center; margin-bottom: 40px; }
-        .links a { margin: 0 10px; text-decoration: none; color: #0366d6; border: 1px solid #0366d6; padding: 5px 10px; border-radius: 5px; }
-        .links a:hover { background: #0366d6; color: #fff; }
-        .abstract { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 40px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        th, td { border: 1px solid #ddd; padding: 15px; text-align: center; vertical-align: middle; }
-        th { background-color: #f8f9fa; font-weight: 600; color: #333; }
-        audio { width: 200px; outline: none; }
-        .sample-title { font-weight: bold; text-align: left; background-color: #fcfcfc; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Audio demonstrations of SEAL speech separation. Compare mixture, separated output, and clean target.">
+  <title>SEAL · Audio Demo</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
 </head>
 <body>
-
-    <h1>SEAL: Sparse Expert Routing with Additive Latent Reconstruction</h1>
-    <h2>for Compact, Non-causal, Single-channel Speech Separation</h2>
-    
-    <!-- 您可以在這裡補上共同作者的名稱 -->
-    <div class="authors">
-        <p>Xiang-Lin75 et al.</p>
+  <a class="skip" href="#listen">Skip to audio examples</a>
+  <header id="top"><h1>SEAL</h1><p>Speech Separation · Audio Demo</p></header>
+  <main class="wrap" id="listen">
+    <h2>EchoSet</h2>
+    <p class="guide">Listen to the mixture, then compare SEAL's separation with the clean target. Switch between Speaker A and Speaker B to hear the separated outputs from the same mixture.</p>
+    <p id="load-status" role="status">Loading audio examples…</p>
+    <div id="listening-content" hidden>
+      <nav id="example-index" aria-label="Jump to mixture example"></nav>
+      <div id="examples"></div>
+      <details class="playback-notes">
+        <summary>Playback notes</summary>
+        <p>Three randomly selected mixtures from EchoSet. Playback and spectrograms are derived directly from the separated waveforms.</p>
+        <p>Mixture, clean targets and extracted outputs share one gain to prevent clipping. Their players share the playback position. Spectrograms show frequencies with a common magnitude scale.</p>
+      </details>
     </div>
-
-    <div class="links">
-        <a href="https://github.com/Xiang-Lin75/SEAL">GitHub Repository</a>
-        <!-- 如果有 arXiv 連結可以換掉下面的 # -->
-        <a href="#">Paper (arXiv)</a>
-    </div>
-
-    <div class="abstract">
-        <strong>Abstract:</strong>
-        SEAL combines three design ideas for compact and efficient speech separation: 
-        (1) a shared-weight DPGRNN cell that iteratively updates a feature state; 
-        (2) refinement-aware Top-1 routing over stateless residual experts; 
-        (3) conservation-structured six-atom latent reconstruction with a bounded additive complex correction.
-        The result is a highly competitive model for single-channel speech separation.
-    </div>
-
-    <h2>Audio Samples (EchoSet)</h2>
-    <p>All examples below demonstrate the separation of two overlapping speakers from a single-channel mixture. Please use headphones for the best experience.</p>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Sample ID</th>
-                <th>Mixture (Input)</th>
-                <th>Clean Sources (Ground Truth)</th>
-                <th>SEAL Separation (Output)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Sample 1 -->
-            <tr>
-                <td rowspan="2" class="sample-title">Example 1 (Test Sample 1)</td>
-                <td rowspan="2">
-                    <img src="audio/ex1_mix.png" alt="Mixture" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;">
-                    <audio controls controlsList="nodownload"><source src="audio/ex1_mix.wav" type="audio/wav"></audio>
-                </td>
-                <td>Source 1:<br><img src="audio/ex1_s1_clean.png" alt="Clean 1" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex1_s1_clean.wav" type="audio/wav"></audio></td>
-                <td><strong>SEAL Source 1:</strong><br><img src="audio/ex1_s1_seal.png" alt="SEAL 1" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex1_s1_seal.wav" type="audio/wav"></audio></td>
-            </tr>
-            <tr>
-                <td>Source 2:<br><img src="audio/ex1_s2_clean.png" alt="Clean 2" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex1_s2_clean.wav" type="audio/wav"></audio></td>
-                <td><strong>SEAL Source 2:</strong><br><img src="audio/ex1_s2_seal.png" alt="SEAL 2" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex1_s2_seal.wav" type="audio/wav"></audio></td>
-            </tr>
-
-            <!-- Sample 2 -->
-            <tr>
-                <td rowspan="2" class="sample-title">Example 2 (Test Sample 2)</td>
-                <td rowspan="2">
-                    <img src="audio/ex2_mix.png" alt="Mixture" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;">
-                    <audio controls controlsList="nodownload"><source src="audio/ex2_mix.wav" type="audio/wav"></audio>
-                </td>
-                <td>Source 1:<br><img src="audio/ex2_s1_clean.png" alt="Clean 1" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex2_s1_clean.wav" type="audio/wav"></audio></td>
-                <td><strong>SEAL Source 1:</strong><br><img src="audio/ex2_s1_seal.png" alt="SEAL 1" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex2_s1_seal.wav" type="audio/wav"></audio></td>
-            </tr>
-            <tr>
-                <td>Source 2:<br><img src="audio/ex2_s2_clean.png" alt="Clean 2" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex2_s2_clean.wav" type="audio/wav"></audio></td>
-                <td><strong>SEAL Source 2:</strong><br><img src="audio/ex2_s2_seal.png" alt="SEAL 2" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex2_s2_seal.wav" type="audio/wav"></audio></td>
-            </tr>
-            <!-- Sample 3 -->
-            <tr>
-                <td rowspan="2" class="sample-title">Example 3 (Test Sample 3)</td>
-                <td rowspan="2">
-                    <img src="audio/ex3_mix.png" alt="Mixture" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;">
-                    <audio controls controlsList="nodownload"><source src="audio/ex3_mix.wav" type="audio/wav"></audio>
-                </td>
-                <td>Source 1:<br><img src="audio/ex3_s1_clean.png" alt="Clean 1" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex3_s1_clean.wav" type="audio/wav"></audio></td>
-                <td><strong>SEAL Source 1:</strong><br><img src="audio/ex3_s1_seal.png" alt="SEAL 1" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex3_s1_seal.wav" type="audio/wav"></audio></td>
-            </tr>
-            <tr>
-                <td>Source 2:<br><img src="audio/ex3_s2_clean.png" alt="Clean 2" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex3_s2_clean.wav" type="audio/wav"></audio></td>
-                <td><strong>SEAL Source 2:</strong><br><img src="audio/ex3_s2_seal.png" alt="SEAL 2" style="width:100%; max-width:200px; border-radius:4px; display:block; margin: 0 auto 5px auto;"><audio controls controlsList="nodownload"><source src="audio/ex3_s2_seal.wav" type="audio/wav"></audio></td>
-            </tr>
-        </tbody>
-    </table>
-
+  </main>
+  <footer class="wrap"><a href="https://github.com/Xiang-Lin75/SEAL">GitHub</a><a href="#top">Back to top ↑</a></footer>
+  <template id="example-template">
+    <article class="example">
+      <div class="example-heading">
+        <h3 class="example-title" aria-live="polite"></h3>
+        <div class="target-switch" role="group">
+          <span>Target</span>
+          <button type="button" data-target="a" aria-pressed="true">Speaker A</button>
+          <button type="button" data-target="b" aria-pressed="false">Speaker B</button>
+        </div>
+      </div>
+      <div class="track-grid"></div>
+      <div class="playback-row"><button type="button" class="restart">Reset playback ↺</button></div>
+    </article>
+  </template>
 </body>
 </html>

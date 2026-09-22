@@ -1,0 +1,58 @@
+{
+  "model": "SEAL",
+  "dataset": "EchoSet",
+  "sample_rate": 16000,
+  "examples": [
+    {
+      "id": "example-01",
+      "mixture_audio": "audio/ex1_mix.wav",
+      "excerpt_seconds": 6.0,
+      "queries": [
+        {
+          "target": "a",
+          "estimate_audio": "audio/ex1_s1_seal.wav",
+          "target_audio": "audio/ex1_s1_clean.wav"
+        },
+        {
+          "target": "b",
+          "estimate_audio": "audio/ex1_s2_seal.wav",
+          "target_audio": "audio/ex1_s2_clean.wav"
+        }
+      ]
+    },
+    {
+      "id": "example-02",
+      "mixture_audio": "audio/ex2_mix.wav",
+      "excerpt_seconds": 6.0,
+      "queries": [
+        {
+          "target": "a",
+          "estimate_audio": "audio/ex2_s1_seal.wav",
+          "target_audio": "audio/ex2_s1_clean.wav"
+        },
+        {
+          "target": "b",
+          "estimate_audio": "audio/ex2_s2_seal.wav",
+          "target_audio": "audio/ex2_s2_clean.wav"
+        }
+      ]
+    },
+    {
+      "id": "example-03",
+      "mixture_audio": "audio/ex3_mix.wav",
+      "excerpt_seconds": 6.0,
+      "queries": [
+        {
+          "target": "a",
+          "estimate_audio": "audio/ex3_s1_seal.wav",
+          "target_audio": "audio/ex3_s1_clean.wav"
+        },
+        {
+          "target": "b",
+          "estimate_audio": "audio/ex3_s2_seal.wav",
+          "target_audio": "audio/ex3_s2_clean.wav"
+        }
+      ]
+    }
+  ]
+}
