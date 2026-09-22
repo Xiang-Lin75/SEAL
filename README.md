@@ -109,7 +109,7 @@ See [`MODEL_CARD.md`](MODEL_CARD.md) for metric definitions and limitations.
 ```text
 models/                 SEAL and inherited backbone modules
 configs/                portable training configuration
-ablations/              paper-control implementations and configs
+
 entrypoints/train.py    trainer implementation
 train.py                root training launcher
 inference.py            waveform separation

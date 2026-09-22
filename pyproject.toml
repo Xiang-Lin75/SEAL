@@ -31,7 +31,7 @@ Issues = "https://github.com/Xiang-Lin75/SEAL/issues"
 py-modules = ["dataloader_echoset", "dataloader_libri2mix", "distributed_utils", "loss_ss", "metrics_ss", "scheduler"]
 
 [tool.setuptools.packages.find]
-include = ["models*", "entrypoints*", "scripts*", "ablations*"]
+include = ["models*", "entrypoints*", "scripts*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
