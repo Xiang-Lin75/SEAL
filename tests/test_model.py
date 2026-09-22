@@ -43,6 +43,7 @@ if torch is not None:
         ConservedSpectralResidualHead,
         FullBandObservationAdapter,
         GTCRN_SS_NonCausal_M1_Core,
+        GTCRN_SS_NonCausal_M1_StepBound,
         RefinementAwareDynamicRouter,
     )
     from models.seal import (
@@ -508,10 +509,10 @@ class TestM1Model(unittest.TestCase):
         config_path = (
             REPOSITORY_ROOT
             / "configs"
-            / "m1_core_echoset.yaml"
+            / "seal_small_echoset.yaml"
         )
         config = OmegaConf.load(config_path)
-        model = GTCRN_SS_NonCausal_M1_Core(**config["network_config"]).cpu().eval()
+        model = GTCRN_SS_NonCausal_M1_StepBound(**config["network_config"]).cpu().eval()
         total = sum(parameter.numel() for parameter in model.parameters())
         trainable = sum(
             parameter.numel()
@@ -526,20 +527,16 @@ class TestM1Model(unittest.TestCase):
         completed = subprocess.run(
             [
                 sys.executable,
-                str(
-                    REPOSITORY_ROOT
-                    / "scripts"
-                    / "measure_complexity.py"
-                ),
+                str(REPOSITORY_ROOT / "scripts" / "measure_complexity.py"),
                 "--config",
                 str(config_path),
             ],
-            cwd=REPOSITORY_ROOT,
             check=True,
             capture_output=True,
             text=True,
             timeout=90,
         )
+        self.assertIn("MAC/s", completed.stdout)
         parameter_match = re.search(r"parameters:\s*([\d,]+)", completed.stdout)
         mac_match = re.search(r"MAC/s:\s*([\d.]+)\s*G", completed.stdout)
         self.assertIsNotNone(parameter_match)
