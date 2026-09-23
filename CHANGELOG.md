@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 - unreleased
+## 0.2.0 - 2026-09-24
 
 Model outputs, initialization, parameter count, and MACs are bit-identical to
 0.1.2; the E266 checkpoint loads unchanged.
