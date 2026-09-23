@@ -1,46 +1,50 @@
-# SEAL
+<h3 align="center">SEAL: Mixture-Closed Reconstruction and Refinement-Aware Routing for Speech Separation</h3>
+<p align="center">
+  <strong>Shao-Chun Hu, Zi-Xiang Lin, Jeih-Weih Hung, Hung-Shin Lee</strong><br>
+  <a href="https://arxiv.org/abs/xxxx.xxxxx">📜 Paper (Coming Soon)</a> | <a href="https://Xiang-Lin75.github.io/SEAL/">🎶 Demo</a>
 
+<p align="center">
+  <img src="https://img.shields.io/github/stars/Xiang-Lin75/SEAL?style=social" alt="GitHub stars" />
+  <img alt="Static Badge" src="https://img.shields.io/badge/license-MIT-blue.svg" />
+</p>
 
-[![Audio Demo](https://img.shields.io/badge/Audio-Demo-blue)](https://Xiang-Lin75.github.io/SEAL/)
+<p align="center">
 
-**Sparse Expert routing with Additive Latent reconstruction** for compact,
-non-causal, single-channel speech separation.
+> SEAL is a highly efficient model for single-channel speech separation that combines a shared-weight DPGRNN cell, refinement-aware Top-1 routing over stateless residual experts, and conservation-structured latent reconstruction to preserve mixture closure.
 
-SEAL combines three design ideas:
+## 💥 News
 
-1. a shared-weight DPGRNN cell that iteratively updates a feature state;
-2. refinement-aware Top-1 routing over stateless residual experts, with a
-   norm-capped step cue;
-3. conservation-structured six-atom latent reconstruction with a bounded
-   additive complex correction and a residual sink that preserves mixture
-   closure.
+- **[2026-09]** We release the codebase and pre-trained model of SEAL-small! 🚀
+- **[2026-09]** Our interactive separation [Audio Demo](https://Xiang-Lin75.github.io/SEAL/) is now live!
 
-![Architecture](assets/fig1_seal.png)
+## 📜 Abstract
 
-![Readout](assets/fig2_readout.png)
+Single-channel speech separation demands highly efficient architectures capable of parsing complex acoustic environments. We propose SEAL (Sparse Expert routing with Additive Latent reconstruction), a novel non-causal speech separation model. SEAL integrates three core design principles: (1) a shared-weight DPGRNN cell that iteratively updates a feature state; (2) refinement-aware Top-1 routing over stateless residual experts, guided by a norm-capped step cue; and (3) conservation-structured six-atom latent reconstruction with a bounded additive complex correction and a residual sink that guarantees mixture closure. Experimental results demonstrate that SEAL-small achieves 12.89 dB SI-SDRi on the EchoSet test set with only 590K parameters and 2.64G MACs/s, providing a compact, scalable, and mathematically bounded approach to state-of-the-art speech separation.
 
-## Release contents
+## SEAL Architecture
 
-This repository provides more than the minimum code-only release:
+Overall pipeline of the model architecture of SEAL and its modules.
 
-- the SEAL-small model and its GTCRN-derived backbone;
-- EchoSet and Libri2Mix data loaders;
-- training losses, TIGER-compatible SI-SDRi evaluation, and a trainer;
-- inference and evaluation commands;
-- model invariant, dataloader, and metric tests;
-- a model card, reproducibility guide, citation metadata, CI, security notes,
-  and third-party attribution;
-- a verified E266 checkpoint as a GitHub Release asset rather than Git history.
+![SEAL Model Architecture](assets/fig1_seal.png)
 
-Datasets, experiment workspaces, TensorBoard logs, private machine paths,
-third-party papers, and superseded M2 experiments are intentionally excluded.
+Detailed view of the Temporal Readout mechanism.
 
-## Installation
+![SEAL Readout](assets/fig2_readout.png)
 
-Python 3.10+ and PyTorch 2.6+ are recommended.
+## 📊 Results
+
+Performance comparisons of SEAL-small operating point on EchoSet.
+
+| Dataset | SI-SDRi | BSS-SDRi | Parameters | MAC/s |
+|---|---:|---:|---:|---:|
+| EchoSet test | 12.8906 dB | 13.6188 dB | 590,463 | 2.636825 G |
+
+## 📦 Installation
+
+Use Python 3.10+ with a suitable [PyTorch build](https://pytorch.org/get-started/locally/) for your CPU or CUDA device.
 
 ```bash
-git clone git@github.com:Xiang-Lin75/SEAL.git
+git clone https://github.com/Xiang-Lin75/SEAL.git
 cd SEAL
 python -m venv .venv
 source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
@@ -48,14 +52,11 @@ python -m pip install --upgrade pip
 python -m pip install -e .
 ```
 
-For the exact CUDA 12.4 reference environment, install the appropriate PyTorch
-wheel first and then run `pip install -e .`.
+## 🚀 Quick Start
 
-## Pretrained checkpoint and inference
+### Test with Pre-trained Model
 
-Download `seal-small-e266.tar` from the latest GitHub release into
-`checkpoints/`. Verify the SHA-256 shown in
-[`checkpoints/README.md`](checkpoints/README.md), then run:
+Download `seal-small-e266.tar` from the latest GitHub release into `checkpoints/`.
 
 ```bash
 python inference.py \
@@ -66,23 +67,16 @@ python inference.py \
   --output-dir outputs/example
 ```
 
-Input must be mono or downmixable 16 kHz audio. SEAL-small outputs two sources.
-The model is non-causal and is intended for offline processing.
+### Train with EchoSet
 
-## Train on EchoSet
-
-Download and extract [EchoSet](https://huggingface.co/datasets/JusperLee/EchoSet),
-then point `ECHOSET_ROOT` at the directory containing `train`, `val`, and `test`.
+Download and extract [EchoSet](https://huggingface.co/datasets/JusperLee/EchoSet).
 
 ```bash
 export ECHOSET_ROOT=/path/to/EchoSet
 python train.py -C configs/seal_small_echoset.yaml -D 0
 ```
 
-For multiple GPUs, pass comma-separated device indices such as `-D 0,1`.
-Absolute laboratory paths are not embedded in the public configuration.
-
-## Evaluate
+### Evaluate with EchoSet
 
 ```bash
 python evaluate.py \
@@ -93,54 +87,19 @@ python evaluate.py \
   --output-csv outputs/e266_test.csv
 ```
 
-The public headline metric is utterance-level PIT SI-SDRi with
-`zero_mean=False`, matching TIGER's public convention. Evaluation writes one
-row per utterance before printing the mean; this enables paired comparisons.
+## 📖 Citation
 
-## Reported SEAL-small operating point
+If you use SEAL, please cite the accompanying paper and this software:
 
-| Dataset | SI-SDRi | BSS-SDRi | Parameters | MAC/s |
-|---|---:|---:|---:|---:|
-| EchoSet test | 12.8906 dB | 13.6188 dB | 590,463 | 2.636825 G |
-
-This is one historical validation-selected E266 run, not a multi-seed estimate.
-See [`MODEL_CARD.md`](MODEL_CARD.md) for metric definitions and limitations.
-
-## Repository layout
-
-```text
-models/                 SEAL and inherited backbone modules
-configs/                portable training configuration
-
-entrypoints/train.py    trainer implementation
-train.py                root training launcher
-inference.py            waveform separation
-evaluate.py             per-utterance SI-SDRi evaluation
-scripts/                complexity and legacy-checkpoint utilities
-tests/                  architecture, data, and metric regressions
-assets/                 paper architecture diagrams
-docs/                   detailed reproducibility instructions
+```bibtex
+@software{Hu_SEAL,
+  author = {Hu, Shao-Chun and Lin, Zi-Xiang and Hung, Jeih-Weih and Lee, Hung-Shin},
+  title = {{SEAL: Mixture-Closed Reconstruction and Refinement-Aware Routing for Speech Separation}},
+  url = {https://github.com/Xiang-Lin75/SEAL},
+  version = {0.1.1}
+}
 ```
 
-## Relationship to TIGER
+## 📧 Contact
 
-[TIGER](https://github.com/JusperLee/TIGER) publishes model/training code,
-EchoSet preprocessing support, inference scripts, two EchoSet training configs,
-demo assets, a static demo site, and three pretrained speech-separation models
-on Hugging Face. Its current README command still names a missing
-`configs/tiger.yml`; the repository actually contains `tiger-small.yml` and
-`tiger-large.yml`. Its test script is also fixed to one sample index rather
-than a full benchmark loop. SEAL therefore exposes a portable config and a
-full ordered-dataset evaluator directly.
-
-TIGER's GitHub `LICENSE` is MIT, while its README badge and Hugging Face cards
-say Apache-2.0. SEAL uses one explicit MIT license and records all inherited
-notices in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-
-## Citation and license
-
-Citation metadata is in [`CITATION.cff`](CITATION.cff). The manuscript citation
-will be added after publication metadata is available.
-
-SEAL code is MIT licensed. Dataset, third-party code, paper, and model-weight
-terms remain separate; see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+If you have any questions, please feel free to open an issue or contact the authors.
