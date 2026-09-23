@@ -2,13 +2,12 @@
 <p align="center">
   <strong>Shao-Chun Hu, Zi-Xiang Lin, Jeih-Weih Hung, Hung-Shin Lee</strong><br>
   <a href="https://arxiv.org/abs/xxxx.xxxxx">📜 Paper (Coming Soon)</a> | <a href="https://Xiang-Lin75.github.io/SEAL/">🎶 Demo</a>
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/github/stars/Xiang-Lin75/SEAL?style=social" alt="GitHub stars" />
   <img alt="Static Badge" src="https://img.shields.io/badge/license-MIT-blue.svg" />
 </p>
-
-<p align="center">
 
 > SEAL is a highly efficient model for single-channel speech separation that combines a shared-weight DPGRNN cell, refinement-aware Top-1 routing over stateless residual experts, and conservation-structured latent reconstruction to preserve mixture closure.
 
@@ -33,11 +32,12 @@ Detailed view of the Temporal Readout mechanism.
 
 ## 📊 Results
 
-Performance comparisons of SEAL-small operating point on EchoSet.
+Performance of the SEAL-small operating point on EchoSet. Exact values and the
+metric conventions are listed in the [model card](MODEL_CARD.md).
 
-| Dataset | SI-SDRi | BSS-SDRi | Parameters | MAC/s |
+| Dataset | SI-SDRi (dB) | BSS-SDRi (dB) | Params (M) | MACs (G/s) |
 |---|---:|---:|---:|---:|
-| EchoSet test | 12.8906 dB | 13.6188 dB | 590,463 | 2.636825 G |
+| EchoSet test | 12.89 | 13.62 | 0.59 | 2.64 |
 
 ## 📦 Installation
 
@@ -96,7 +96,7 @@ If you use SEAL, please cite the accompanying paper and this software:
   author = {Hu, Shao-Chun and Lin, Zi-Xiang and Hung, Jeih-Weih and Lee, Hung-Shin},
   title = {{SEAL: Mixture-Closed Reconstruction and Refinement-Aware Routing for Speech Separation}},
   url = {https://github.com/Xiang-Lin75/SEAL},
-  version = {0.1.1}
+  version = {0.1.2}
 }
 ```
 

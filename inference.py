@@ -1,7 +1,7 @@
 """Separate a mono waveform with SEAL.
 
 Examples:
-    python inference.py --config configs/seal_small_echoset.yaml \
+    python inference.py --config checkpoints/e266_config_historical.yaml \
         --checkpoint checkpoints/seal-small-e266.tar --legacy-e266 \
         --audio mixture.wav --output-dir outputs/example
 """

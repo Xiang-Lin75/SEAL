@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seal-speech-separation"
-version = "0.1.1"
+version = "0.1.2"
 description = "SEAL: mixture-closed reconstruction and refinement-aware routing for speech separation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,6 +21,12 @@ dependencies = [
   "tensorboard>=2.16",
   "torch>=2.6",
   "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+metrics = [
+  "pesq==0.0.4",
+  "pystoi==0.4.1",
 ]
 
 [project.urls]

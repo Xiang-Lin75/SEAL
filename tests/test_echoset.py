@@ -10,14 +10,16 @@ import numpy as np
 try:
     import soundfile as sf
     import torch
-
-    from seal.data.dataloader_echoset import EchoSetDataset
 except ImportError as exc:  # pragma: no cover - exercised in minimal environments
     sf = None
     torch = None
     EchoSetDataset = None
     _DEPENDENCY_ERROR = exc
 else:
+    # Only third-party dependencies may skip this suite. A missing SEAL module
+    # is a packaging bug and must fail loudly instead of being skipped.
+    from seal.data.dataloader_echoset import EchoSetDataset
+
     _DEPENDENCY_ERROR = None
 
 

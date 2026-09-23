@@ -6,8 +6,8 @@ venv/
 exp/
 outputs/
 tmp/
-data/
-datasets/
+/data/
+/datasets/
 *.log
 events.out.tfevents*
 *.ckpt
