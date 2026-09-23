@@ -53,6 +53,91 @@
           "target_audio": "audio/ex3_s2_clean.wav"
         }
       ]
+    },
+    {
+      "id": "example-04",
+      "mixture_audio": "audio/ex4_mix.wav",
+      "excerpt_seconds": 6.0,
+      "queries": [
+        {
+          "target": "a",
+          "estimate_audio": "audio/ex4_s1_seal.wav",
+          "target_audio": "audio/ex4_s1_clean.wav"
+        },
+        {
+          "target": "b",
+          "estimate_audio": "audio/ex4_s2_seal.wav",
+          "target_audio": "audio/ex4_s2_clean.wav"
+        }
+      ]
+    },
+    {
+      "id": "example-05",
+      "mixture_audio": "audio/ex5_mix.wav",
+      "excerpt_seconds": 6.0,
+      "queries": [
+        {
+          "target": "a",
+          "estimate_audio": "audio/ex5_s1_seal.wav",
+          "target_audio": "audio/ex5_s1_clean.wav"
+        },
+        {
+          "target": "b",
+          "estimate_audio": "audio/ex5_s2_seal.wav",
+          "target_audio": "audio/ex5_s2_clean.wav"
+        }
+      ]
+    },
+    {
+      "id": "example-06",
+      "mixture_audio": "audio/ex6_mix.wav",
+      "excerpt_seconds": 6.0,
+      "queries": [
+        {
+          "target": "a",
+          "estimate_audio": "audio/ex6_s1_seal.wav",
+          "target_audio": "audio/ex6_s1_clean.wav"
+        },
+        {
+          "target": "b",
+          "estimate_audio": "audio/ex6_s2_seal.wav",
+          "target_audio": "audio/ex6_s2_clean.wav"
+        }
+      ]
+    },
+    {
+      "id": "example-07",
+      "mixture_audio": "audio/ex7_mix.wav",
+      "excerpt_seconds": 6.0,
+      "queries": [
+        {
+          "target": "a",
+          "estimate_audio": "audio/ex7_s1_seal.wav",
+          "target_audio": "audio/ex7_s1_clean.wav"
+        },
+        {
+          "target": "b",
+          "estimate_audio": "audio/ex7_s2_seal.wav",
+          "target_audio": "audio/ex7_s2_clean.wav"
+        }
+      ]
+    },
+    {
+      "id": "example-08",
+      "mixture_audio": "audio/ex8_mix.wav",
+      "excerpt_seconds": 6.0,
+      "queries": [
+        {
+          "target": "a",
+          "estimate_audio": "audio/ex8_s1_seal.wav",
+          "target_audio": "audio/ex8_s1_clean.wav"
+        },
+        {
+          "target": "b",
+          "estimate_audio": "audio/ex8_s2_seal.wav",
+          "target_audio": "audio/ex8_s2_clean.wav"
+        }
+      ]
     }
   ]
 }
