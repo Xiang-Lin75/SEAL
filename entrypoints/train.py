@@ -25,12 +25,12 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 
-ABALATION_DIR = Path(__file__).resolve().parent.parent
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 # Keep imports independent of the checkout directory name.
-while str(ABALATION_DIR) in sys.path:
-    sys.path.remove(str(ABALATION_DIR))
-sys.path.insert(0, str(ABALATION_DIR))
+while str(REPOSITORY_ROOT) in sys.path:
+    sys.path.remove(str(REPOSITORY_ROOT))
+sys.path.insert(0, str(REPOSITORY_ROOT))
 
 from seal.data.dataloader_echoset import EchoSetDataset
 
@@ -157,7 +157,7 @@ def load_model_class(config):
         module = importlib.import_module(module_name)
     except ModuleNotFoundError:
         if module_name.startswith("models."):
-            local_model = ABALATION_DIR / (module_name.split(".", 1)[1].replace(".", "/") + ".py")
+            local_model = REPOSITORY_ROOT / (module_name.split(".", 1)[1].replace(".", "/") + ".py")
             if local_model.exists():
                 spec = importlib.util.spec_from_file_location(module_name, local_model)
                 module = importlib.util.module_from_spec(spec)
@@ -578,50 +578,29 @@ class Trainer:
             if self.resume:
                 snapshot_root = Path(self.code_path) / f"resume_{self.run_id}"
                 config_path = Path(self.exp_path) / f"config_resume_{self.run_id}.yaml"
-                trainer_copy = Path(self.exp_path) / f"train_ablation_resume_{self.run_id}.py"
+                trainer_copy = Path(self.exp_path) / f"train_resume_{self.run_id}.py"
             else:
                 snapshot_root = Path(self.code_path)
                 config_path = Path(self.exp_path) / "config.yaml"
-                trainer_copy = Path(self.exp_path) / "train_ablation.py"
+                trainer_copy = Path(self.exp_path) / "train.py"
 
             snapshot_root.mkdir(parents=True, exist_ok=True)
             OmegaConf.save(data, config_path)
             shutil.copy2(__file__, trainer_copy)
-            shutil.copytree(
-                ABALATION_DIR / "models",
-                snapshot_root / "models",
-                dirs_exist_ok=True,
-            )
-            shutil.copytree(
-                ABALATION_DIR / "configs",
-                snapshot_root / "configs",
-                dirs_exist_ok=True,
-            )
-            # Formal M1-StepBound arms import adaptors from ABLATION/models and
-            # derive their causal contract from the arm YAML plus both locks.
-            # Snapshot the complete protocol bundle so a checkpoint never
-            # outlives the exact intervention code that produced it.
-            shutil.copytree(
-                ABALATION_DIR / "ABLATION",
-                snapshot_root / "ABLATION",
-                dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns(
-                    "__pycache__",
-                    "*.pyc",
-                    "resolved",
-                ),
-            )
+            # Snapshot the package and configs so a checkpoint never outlives
+            # the exact code that produced it.
+            for package_dir in ("seal", "configs"):
+                shutil.copytree(
+                    REPOSITORY_ROOT / package_dir,
+                    snapshot_root / package_dir,
+                    dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+                )
             for dependency_name in (
-                "train_ablation.py",
-                "loss_ss.py",
-                "dataloader_echoset.py",
-                "dataloader_libri2mix.py",
-                "dataloader_wham.py",
-                "scheduler.py",
-                "distributed_utils.py",
                 "requirements.txt",
+                "pyproject.toml",
             ):
-                dependency_path = ABALATION_DIR / dependency_name
+                dependency_path = REPOSITORY_ROOT / dependency_name
                 if dependency_path.exists():
                     shutil.copy2(dependency_path, snapshot_root / dependency_name)
 
@@ -629,7 +608,7 @@ class Trainer:
                 try:
                     result = subprocess.run(
                         ["git", *git_args],
-                        cwd=ABALATION_DIR,
+                        cwd=REPOSITORY_ROOT,
                         capture_output=True,
                         text=True,
                         encoding="utf-8",
@@ -746,7 +725,7 @@ class Trainer:
             if (
                 hasattr(candidate, "latest_expert_strength")
                 or hasattr(candidate, "latest_distribution_stats")
-                or callable(getattr(candidate, "get_m0_diagnostics", None))
+                or callable(getattr(candidate, "get_diagnostics", None))
             ):
                 return candidate
             for attr in ("temporal_moe", "temporal_ffn", "moe", "gate", "router"):
@@ -768,7 +747,7 @@ class Trainer:
             if layers is not None:
                 candidates.extend(list(layers))
 
-        # M0 owns one shared recursive separator/cell. Its temporal MoE is
+        # SEAL owns one shared recursive separator/cell. Its temporal MoE is
         # therefore visited only once here even though the cell is unrolled R
         # times during forward().
         separator = getattr(target_model, "separator", None)
@@ -806,9 +785,9 @@ class Trainer:
         for layer in self._iter_gate_layers():
             strength = getattr(layer, "latest_expert_strength", None)
             if strength is None:
-                get_m0_diagnostics = getattr(layer, "get_m0_diagnostics", None)
-                if callable(get_m0_diagnostics):
-                    strength = get_m0_diagnostics().get("expert_load")
+                get_diagnostics = getattr(layer, "get_diagnostics", None)
+                if callable(get_diagnostics):
+                    strength = get_diagnostics().get("expert_load")
             if strength is None:
                 strengths.append(None)
                 continue
@@ -825,9 +804,9 @@ class Trainer:
         for layer in self._iter_gate_layers():
             stats = getattr(layer, "latest_distribution_stats", None)
             if stats is None:
-                get_m0_diagnostics = getattr(layer, "get_m0_diagnostics", None)
-                if callable(get_m0_diagnostics):
-                    stats = get_m0_diagnostics()
+                get_diagnostics = getattr(layer, "get_diagnostics", None)
+                if callable(get_diagnostics):
+                    stats = get_diagnostics()
             if stats is None:
                 stats_all.append(None)
                 continue
@@ -884,7 +863,7 @@ class Trainer:
 
         Diagnostics are logging-only values.  Packing them avoids issuing one
         all-reduce per scalar on every training step, which is especially
-        expensive for M0's per-refinement router statistics.
+        expensive for SEAL's per-refinement router statistics.
         """
 
         if self.world_size <= 1:
@@ -995,7 +974,7 @@ class Trainer:
 
     @staticmethod
     def _canonicalize_checkpoint_contract(contract):
-        """Add defaults introduced after the original M0/M1 checkpoints."""
+        """Add defaults introduced after the earliest trainer checkpoints."""
 
         canonical = dict(contract)
         canonical.setdefault("reproducibility", None)
@@ -1311,7 +1290,7 @@ class Trainer:
 
     def _clear_model_aux(self):
         target_model = self.model.module if self.world_size > 1 else self.model
-        clear_aux = getattr(target_model, "clear_m0_aux", None)
+        clear_aux = getattr(target_model, "clear_aux", None)
         if callable(clear_aux):
             clear_aux()
 
@@ -1459,7 +1438,7 @@ class Trainer:
                 1e-12
             )
             self.writer.add_scalars(
-                "m2_load_controller/hard_fraction",
+                "load_controller/hard_fraction",
                 {
                     f"expert_{index}": value.item()
                     for index, value in enumerate(hard_fraction)
@@ -1467,7 +1446,7 @@ class Trainer:
                 epoch,
             )
             self.writer.add_scalars(
-                "m2_load_controller/hard_counts",
+                "load_controller/hard_counts",
                 {
                     f"expert_{index}": value.item()
                     for index, value in enumerate(counts)
@@ -1475,7 +1454,7 @@ class Trainer:
                 epoch,
             )
             self.writer.add_scalars(
-                "m2_load_controller/summary",
+                "load_controller/summary",
                 {
                     "optimizer_updates": float(epoch_stats["updates"]),
                     "hard_tokens": total.item(),
@@ -1490,7 +1469,7 @@ class Trainer:
         bias = epoch_stats["last_bias"]
         if bias is not None:
             self.writer.add_scalars(
-                "m2_load_controller/load_bias",
+                "load_controller/load_bias",
                 {
                     f"expert_{index}": value.item()
                     for index, value in enumerate(bias)

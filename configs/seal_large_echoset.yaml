@@ -3,22 +3,15 @@ dataset_type: echoset
 
 model:
   module: seal.models.seal
-  class: GTCRN_SS_NonCausal_M1_StepBound
-  name: "SEAL-large R8 (EchoSet)"
+  class: SEAL
+  name: "SEAL-large, 8 refinement steps (EchoSet)"
 
-# M1-StepBound hypothesis: refinement identity is a scheduling cue. It may
-# resolve an acoustically ambiguous expert route, but should not overturn a
-# confident acoustic winner. The router query is
+# The refinement-aware router forms its query as
 #
 #   normalize(sum_b softmax(w)_b * normalized(branch_b) + step_embedding[s]).
 #
-# The intervention clips only the existing step-embedding row to an absolute
-# L2 budget. It adds no parameter, preserves its direction, and is exactly the
-# identity below the budget. An absolute cap is intentional: its relative
-# influence grows when the acoustic feature is weak, matching a tie-breaker.
-#
-# The release fixes 0.15 as the paper operating point. This configuration does
-# not claim that the value is globally optimal.
+# SEAL caps the L2 norm of each step-embedding row, so the refinement step can
+# break ties between experts without overriding a confident acoustic route.
 network_config:
   n_fft: 512
   hop_len: 256
@@ -28,22 +21,16 @@ network_config:
   hidden_channels: 72
   freq_downsample_layers: 1
   stft_center: true
-  architecture_version: m1_stepbound_v1
+  architecture_version: seal_v1
   mask_head_type: latent_additive
-  # Legacy key retained for checkpoint/config compatibility. It deterministically
-  # pairs only the shared operators used by matched controls; target-specific
-  # SAFR/RADR/observation/additive-residual parameters remain freshly initialized.
-  paired_m0_initialization: true
+  # Start SEAL's operators that also exist in the baseline graph from the
+  # baseline's initial weights; SEAL-only parameters are freshly initialized.
+  paired_initialization: true
   num_refinement_steps: 8
   # RADR and SAFR own step-indexed parameters up to this fixed ceiling.
   max_refinement_steps: 8
-  # ---- the one mechanism under test ----------------------------------------
-  # Maximum L2 norm of each row of the router's step embedding. 0.0 disables the
-  # clip and reproduces M1 exactly, which is the control arm of this ablation.
-  # The ICASSP profile fixes 0.15 and discloses its test-informed history. The
-  # extended protocol treats this as an implementation default and blocks its
-  # formal runs until calibration_lock.yaml selects a validation-only candidate.
-  # The 0.0/unbounded setting is a causal control, never a calibration winner.
+  # Maximum L2 norm of each router step-embedding row (paper operating point;
+  # not claimed to be globally optimal). 0.0 disables the cap.
   step_embedding_max_norm: 0.15
 
   moe_enabled: true
@@ -83,8 +70,7 @@ network_config:
   responsibility_utilization_floor: 0.01
   complex_residual_weight: 0.0
 
-# Training, validation, loss, and optimization settings are the frozen common
-# contract for every matched M1-StepBound ablation arm.
+# Training, validation, loss, and optimization settings used for the paper.
 loss:
   type: tiger
   kwargs:

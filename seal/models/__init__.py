@@ -1,10 +1,6 @@
 """Public SEAL model exports."""
 
-from .seal import (
-    GTCRN_SS_NonCausal_M1_StepBound,
-    NormClippedStepEmbedding,
-)
+from .routing import NormClippedStepEmbedding
+from .seal import SEAL, SEALBaseline, SEALCore
 
-SEAL = GTCRN_SS_NonCausal_M1_StepBound
-
-__all__ = ["SEAL", "GTCRN_SS_NonCausal_M1_StepBound", "NormClippedStepEmbedding"]
+__all__ = ["SEAL", "SEALBaseline", "SEALCore", "NormClippedStepEmbedding"]

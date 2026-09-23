@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -18,7 +19,27 @@ import torch
 from omegaconf import OmegaConf
 
 
-def load_model(config_path: Path, checkpoint_path: Path, device: torch.device, legacy_e266: bool):
+def _load_checkpoint(checkpoint_path: Path, trust_checkpoint: bool):
+    try:
+        return torch.load(checkpoint_path, map_location="cpu", weights_only=True)
+    except pickle.UnpicklingError as error:
+        if not trust_checkpoint:
+            raise RuntimeError(
+                f"{checkpoint_path} contains non-tensor objects (trainer "
+                "checkpoints store NumPy RNG state), so the restricted loader "
+                "refused it. If you produced this file yourself, rerun with "
+                "--trust-checkpoint. Never do this for files from untrusted sources."
+            ) from error
+    return torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+
+
+def load_model(
+    config_path: Path,
+    checkpoint_path: Path,
+    device: torch.device,
+    legacy_e266: bool,
+    trust_checkpoint: bool = False,
+):
     if legacy_e266:
         from scripts.legacy_e266_adapter import construct_e266_model
 
@@ -34,7 +55,7 @@ def load_model(config_path: Path, checkpoint_path: Path, device: torch.device, l
     model_class = getattr(module, str(config.model["class"]))
     kwargs = OmegaConf.to_container(config.network_config, resolve=True)
     model = model_class(**kwargs).to(device)
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
+    checkpoint = _load_checkpoint(checkpoint_path, trust_checkpoint)
     state = checkpoint.get("model", checkpoint.get("state_dict", checkpoint))
     if not isinstance(state, dict):
         raise TypeError("checkpoint does not contain a model state dictionary")
@@ -53,6 +74,11 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=Path("outputs"))
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--legacy-e266", action="store_true")
+    parser.add_argument(
+        "--trust-checkpoint",
+        action="store_true",
+        help="allow full unpickling of a trainer checkpoint you produced yourself",
+    )
     args = parser.parse_args()
 
     waveform, sample_rate = sf.read(args.audio, dtype="float32", always_2d=True)
@@ -62,7 +88,13 @@ def main() -> None:
         waveform = waveform.mean(axis=1, keepdims=True)
 
     device = torch.device(args.device)
-    model, metadata = load_model(args.config, args.checkpoint, device, args.legacy_e266)
+    model, metadata = load_model(
+        args.config,
+        args.checkpoint,
+        device,
+        args.legacy_e266,
+        args.trust_checkpoint,
+    )
     mixture = torch.from_numpy(np.ascontiguousarray(waveform[:, 0])).unsqueeze(0).to(device)
     with torch.inference_mode():
         estimates = model(mixture)

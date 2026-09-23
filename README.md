@@ -87,6 +87,36 @@ python evaluate.py \
   --output-csv outputs/e266_test.csv
 ```
 
+To evaluate a model you trained yourself, point `--config` at the training
+config and `--checkpoint` at `exp/<run>/checkpoints/best_model.tar`, and add
+`--trust-checkpoint`: trainer checkpoints also store NumPy RNG state, which the
+restricted loader refuses. Only use this flag for files you produced.
+
+## 🗂️ Code Structure
+
+```text
+seal/
+  models/
+    seal.py        SEAL model (SEALBaseline -> SEALCore -> SEAL)
+    separator.py   shared-weight DPGRNN cell unrolled over refinement steps
+    routing.py     Top-1 temporal readout experts and refinement-aware router
+    heads.py       mixture-closed latent-atom mask and additive correction
+    blocks.py      ERB/SFE front-end, conv/recurrent blocks, encoder, decoder
+  data/            EchoSet loader
+  losses/          PIT and TIGER-compatible losses
+  metrics/         SI-SDR, BSS-SDR, PESQ/STOI
+configs/           SEAL-small and SEAL-large training configs
+entrypoints/       trainer (run through train.py)
+scripts/           complexity measurement and the E266 checkpoint loader
+```
+
+```python
+from seal.models import SEAL
+
+model = SEAL(n_fft=512, hop_len=256, win_len=512)   # see configs/ for all options
+separated = model(mixture)                          # (B, L) -> (B, 2, L)
+```
+
 ## 📖 Citation
 
 If you use SEAL, please cite the accompanying paper and this software:
@@ -96,7 +126,7 @@ If you use SEAL, please cite the accompanying paper and this software:
   author = {Hu, Shao-Chun and Lin, Zi-Xiang and Hung, Jeih-Weih and Lee, Hung-Shin},
   title = {{SEAL: Mixture-Closed Reconstruction and Refinement-Aware Routing for Speech Separation}},
   url = {https://github.com/Xiang-Lin75/SEAL},
-  version = {0.1.2}
+  version = {0.2.0}
 }
 ```
 

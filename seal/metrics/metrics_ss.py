@@ -225,7 +225,7 @@ def perceptual_metrics(
     Perceptual metrics do not choose a second, metric-specific permutation.
     The estimates are first aligned with the paper's primary no-zero-mean
     SI-SDR assignment, then PESQ/STOI are averaged over sources for each
-    utterance.  The formal M1-StepBound protocol uses 16-kHz wide-band PESQ
+    utterance.  The paper protocol uses 16-kHz wide-band PESQ
     and classical (non-extended) STOI.
     """
 

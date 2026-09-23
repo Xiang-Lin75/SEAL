@@ -22,6 +22,11 @@ def main() -> None:
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--legacy-e266", action="store_true")
+    parser.add_argument(
+        "--trust-checkpoint",
+        action="store_true",
+        help="allow full unpickling of a trainer checkpoint you produced yourself",
+    )
     args = parser.parse_args()
 
     device = torch.device(args.device)
@@ -41,7 +46,13 @@ def main() -> None:
         num_workers=args.num_workers,
         collate_fn=dataset.collate_fn_with_lengths,
     )
-    model, _ = load_model(args.config, args.checkpoint, device, args.legacy_e266)
+    model, _ = load_model(
+        args.config,
+        args.checkpoint,
+        device,
+        args.legacy_e266,
+        args.trust_checkpoint,
+    )
     rows = []
     with torch.inference_mode():
         for mixtures, targets, lengths, keys in loader:

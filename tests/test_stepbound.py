@@ -2,22 +2,22 @@
 
 Run from the repository root with::
 
-    python tests/test_m1_stepbound_model.py
+    python -m unittest tests.test_stepbound
 
 The mechanism is a norm clip on an existing embedding, which makes two failure
 modes easy to ship unnoticed, so both are gated explicitly:
 
-* the clip could be **vacuous** -- never binding, leaving M1 unchanged forever.
-  ``test_clip_actually_binds_once_the_embedding_grows`` drives the embedding to
-  M1 E247's measured norms (0.65 .. 1.17) and requires the effective norm to be
-  the budget, not the raw value.
+* the clip could be **vacuous** -- never binding, leaving SEALCore unchanged
+  forever. ``test_clip_actually_binds_once_the_embedding_grows`` drives the
+  embedding to norms measured on a trained SEALCore checkpoint (0.65 .. 1.17)
+  and requires the effective norm to be the budget, not the raw value.
 * the clip could be **destructive** -- changing direction, or killing the
-  gradient the way the section 16 v2 ``tanh`` did.
+  gradient the way a saturating ``tanh`` bound would.
   ``test_clip_preserves_direction`` and ``test_gradient_survives_the_clip``
   cover those.
 
-Bit-exactness with M1 at construction still applies here (unlike NoGTConv):
-M1 zero-initializes the step embedding, so the clip starts inert.
+Bit-exactness with SEALCore at construction still applies here:
+SEALCore zero-initializes the step embedding, so the clip starts inert.
 """
 
 from __future__ import annotations
@@ -43,16 +43,12 @@ except ModuleNotFoundError as error:  # pragma: no cover - environment guard.
     _DEPENDENCY_ERROR = str(error)
 
 if torch is not None:
-    from seal.models.seal import GTCRN_SS_NonCausal_M1_Core
-    from seal.models.seal import (
-        GTCRN_SS_NonCausal_M1_StepBound,
-        NormClippedStepEmbedding,
-    )
+    from seal.models import SEAL, NormClippedStepEmbedding, SEALCore
 
 CONFIG = "configs/seal_small_echoset.yaml"
 SEED = 20260811
-# Measured on M1 E247, steps 1..4. The clip must bind against these.
-M1_TRAINED_NORMS = (1.1666, 1.1634, 0.6543, 0.8147)
+# Measured on a trained SEALCore checkpoint (epoch 247), steps 1..4. The clip must bind against these.
+TRAINED_NORMS = (1.1666, 1.1634, 0.6543, 0.8147)
 
 
 def _build(cls, **kwargs):
@@ -63,7 +59,7 @@ def _build(cls, **kwargs):
 
 
 @unittest.skipIf(torch is None, f"missing dependency: {_DEPENDENCY_ERROR}")
-class TestM1StepBound(unittest.TestCase):
+class TestStepBound(unittest.TestCase):
     def setUp(self) -> None:
         self.waveform = torch.randn(2, 16000, generator=torch.Generator().manual_seed(7))
 
@@ -72,7 +68,7 @@ class TestM1StepBound(unittest.TestCase):
         return model.separator.cell.temporal_readout.router
 
     def _load_trained_norms(self, model) -> None:
-        """Give the embedding M1 E247's measured magnitudes."""
+        """Give the embedding the measured trained magnitudes."""
 
         weight = self._router(model).step_embedding.weight
         with torch.no_grad():
@@ -80,23 +76,23 @@ class TestM1StepBound(unittest.TestCase):
                 weight.shape, generator=torch.Generator().manual_seed(11)
             )
             direction = direction / direction.norm(dim=-1, keepdim=True)
-            target = torch.tensor(M1_TRAINED_NORMS[: weight.shape[0]])
+            target = torch.tensor(TRAINED_NORMS[: weight.shape[0]])
             weight.copy_(direction * target[:, None])
 
-    def test_matches_m1_bit_exactly_at_init(self) -> None:
-        m1 = _build(GTCRN_SS_NonCausal_M1_Core)
-        bounded = _build(GTCRN_SS_NonCausal_M1_StepBound)
+    def test_matches_core_bit_exactly_at_init(self) -> None:
+        core = _build(SEALCore)
+        bounded = _build(SEAL)
         self.assertEqual(
-            sum(p.numel() for p in m1.parameters()),
+            sum(p.numel() for p in core.parameters()),
             sum(p.numel() for p in bounded.parameters()),
             "the clip must cost no parameters",
         )
         lengths = torch.tensor([16000, 9000])
         with torch.no_grad():
-            self.assertTrue(torch.equal(m1(self.waveform), bounded(self.waveform)))
+            self.assertTrue(torch.equal(core(self.waveform), bounded(self.waveform)))
             self.assertTrue(
                 torch.equal(
-                    m1(self.waveform, lengths=lengths),
+                    core(self.waveform, lengths=lengths),
                     bounded(self.waveform, lengths=lengths),
                 )
             )
@@ -105,15 +101,15 @@ class TestM1StepBound(unittest.TestCase):
         """The gate against a vacuous bound.
 
         A clip that never binds would pass every other test in this file while
-        leaving the model identical to M1 forever.
+        leaving the model identical to SEALCore forever.
         """
 
         budget = 0.15
-        model = _build(GTCRN_SS_NonCausal_M1_StepBound, step_embedding_max_norm=budget)
+        model = _build(SEAL, step_embedding_max_norm=budget)
         self._load_trained_norms(model)
         report = model.step_bound_report()
         entry = next(iter(report["step_embedding_norms"].values()))
-        self.assertEqual(report["rows_clipped"], len(M1_TRAINED_NORMS))
+        self.assertEqual(report["rows_clipped"], len(TRAINED_NORMS))
         self.assertAlmostEqual(report["clip_active_fraction"], 1.0)
         self.assertTrue(report["bound_is_active"])
         for raw, effective in zip(entry["raw"], entry["effective"]):
@@ -122,7 +118,7 @@ class TestM1StepBound(unittest.TestCase):
 
     def test_below_budget_rows_pass_through_untouched(self) -> None:
         budget = 0.15
-        model = _build(GTCRN_SS_NonCausal_M1_StepBound, step_embedding_max_norm=budget)
+        model = _build(SEAL, step_embedding_max_norm=budget)
         weight = self._router(model).step_embedding.weight
         with torch.no_grad():
             small = torch.randn(
@@ -138,7 +134,7 @@ class TestM1StepBound(unittest.TestCase):
     def test_clip_preserves_direction(self) -> None:
         """Only the magnitude may change; the routed direction must survive."""
 
-        model = _build(GTCRN_SS_NonCausal_M1_StepBound, step_embedding_max_norm=0.15)
+        model = _build(SEAL, step_embedding_max_norm=0.15)
         self._load_trained_norms(model)
         weight = self._router(model).step_embedding.weight
         with torch.no_grad():
@@ -149,15 +145,15 @@ class TestM1StepBound(unittest.TestCase):
         self.assertLess(float((cosine - 1.0).abs().max()), 1e-5)
 
     def test_gradient_survives_the_clip(self) -> None:
-        """The section 16 v2 lesson: a bound must not kill its own gradient.
+        """A bound must not kill its own gradient.
 
-        ``tanh`` saturated and froze the reverberation branch permanently. A
+        A saturating ``tanh`` can freeze the bounded parameter permanently. A
         norm clip rescales, so the gradient stays finite however far past the
         budget the row sits.
         """
 
         torch.backends.cudnn.enabled = False
-        model = _build(GTCRN_SS_NonCausal_M1_StepBound, step_embedding_max_norm=0.15)
+        model = _build(SEAL, step_embedding_max_norm=0.15)
         self._load_trained_norms(model)
         model.train()
         model(self.waveform).square().mean().backward()
@@ -166,25 +162,25 @@ class TestM1StepBound(unittest.TestCase):
         self.assertGreater(float(grad.abs().max()), 0.0, "the clip froze the branch")
         self.assertTrue(torch.isfinite(grad).all())
 
-    def test_unbounded_arm_reproduces_m1_exactly(self) -> None:
-        """``0.0`` is the control arm and must leave the router untouched."""
+    def test_zero_cap_reproduces_core_exactly(self) -> None:
+        """``0.0`` disables the cap and must leave the router untouched."""
 
-        m1 = _build(GTCRN_SS_NonCausal_M1_Core)
-        control = _build(GTCRN_SS_NonCausal_M1_StepBound, step_embedding_max_norm=0.0)
+        core = _build(SEALCore)
+        control = _build(SEAL, step_embedding_max_norm=0.0)
         self.assertEqual(control.bounded_routers, [])
         self.assertIsInstance(
             self._router(control).step_embedding, torch.nn.Embedding
         )
-        for model in (m1, control):
+        for model in (core, control):
             self._load_trained_norms(model)
         with torch.no_grad():
-            self.assertTrue(torch.equal(m1(self.waveform), control(self.waveform)))
+            self.assertTrue(torch.equal(core(self.waveform), control(self.waveform)))
 
     def test_bounding_changes_the_output_once_the_embedding_is_trained(self) -> None:
-        """With M1's measured norms loaded, the bound must matter."""
+        """With the measured trained norms loaded, the bound must matter."""
 
-        control = _build(GTCRN_SS_NonCausal_M1_StepBound, step_embedding_max_norm=0.0)
-        bounded = _build(GTCRN_SS_NonCausal_M1_StepBound, step_embedding_max_norm=0.15)
+        control = _build(SEAL, step_embedding_max_norm=0.0)
+        bounded = _build(SEAL, step_embedding_max_norm=0.15)
         for model in (control, bounded):
             self._load_trained_norms(model)
         with torch.no_grad():
@@ -195,7 +191,7 @@ class TestM1StepBound(unittest.TestCase):
     def test_fusion_step_embedding_is_left_alone(self) -> None:
         """Only the expert router is bounded; SAFR's own embedding is separate."""
 
-        model = _build(GTCRN_SS_NonCausal_M1_StepBound)
+        model = _build(SEAL)
         self.assertIsInstance(
             model.separator.fusion.step_embedding, torch.nn.Embedding
         )
@@ -205,27 +201,27 @@ class TestM1StepBound(unittest.TestCase):
         self.assertEqual(len(model.bounded_routers), 1)
 
     def test_state_dict_round_trip(self) -> None:
-        model = _build(GTCRN_SS_NonCausal_M1_StepBound)
+        model = _build(SEAL)
         self._load_trained_norms(model)
         with torch.no_grad():
             expected = model(self.waveform)
-        clone = _build(GTCRN_SS_NonCausal_M1_StepBound)
+        clone = _build(SEAL)
         clone.load_state_dict(model.state_dict(), strict=True)
         clone.eval()
         with torch.no_grad():
             self.assertTrue(torch.equal(expected, clone(self.waveform)))
 
-    def test_state_dict_is_interchangeable_with_m1(self) -> None:
-        """The wrapper must not rename anything, so M1 checkpoints still load."""
+    def test_state_dict_is_interchangeable_with_core(self) -> None:
+        """The wrapper must not rename anything, so SEALCore checkpoints still load."""
 
-        m1 = _build(GTCRN_SS_NonCausal_M1_Core)
-        bounded = _build(GTCRN_SS_NonCausal_M1_StepBound)
-        self.assertEqual(set(m1.state_dict()), set(bounded.state_dict()))
-        bounded.load_state_dict(m1.state_dict(), strict=True)
+        core = _build(SEALCore)
+        bounded = _build(SEAL)
+        self.assertEqual(set(core.state_dict()), set(bounded.state_dict()))
+        bounded.load_state_dict(core.state_dict(), strict=True)
 
     def test_rejects_unknown_architecture_version(self) -> None:
         with self.assertRaises(ValueError):
-            GTCRN_SS_NonCausal_M1_StepBound(architecture_version="not_a_version")
+            SEAL(architecture_version="not_a_version")
 
     def test_production_config_builds(self) -> None:
         path = REPOSITORY_ROOT / CONFIG
@@ -234,12 +230,12 @@ class TestM1StepBound(unittest.TestCase):
         config = OmegaConf.load(path)
         network = OmegaConf.to_container(config.network_config, resolve=True)
         torch.manual_seed(SEED)
-        model = GTCRN_SS_NonCausal_M1_StepBound(**network)
+        model = SEAL(**network)
         model.eval()
         with torch.no_grad():
             output = model(self.waveform)
         self.assertEqual(output.shape[1], network.get("num_sources", 2))
-        self.assertEqual(model.architecture_version, "m1_stepbound_v1")
+        self.assertEqual(model.architecture_version, "seal_v1")
         report = model.step_bound_report()
         print(
             f"\nconfig build: max_norm={report['max_norm']}, "

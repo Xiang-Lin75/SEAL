@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0 - unreleased
+
+Model outputs, initialization, parameter count, and MACs are bit-identical to
+0.1.2; the E266 checkpoint loads unchanged.
+
+- Split the 5,194-line `seal/models/seal.py` into `seal.py`, `separator.py`,
+  `routing.py`, `heads.py`, and `blocks.py`, and removed six unused classes
+  from the pre-SEAL single-stage model.
+- Public class names: `SEAL`, `SEALCore`, `SEALBaseline` replace the internal
+  `GTCRN_SS_NonCausal_*` names; `get_diagnostics()` / `clear_aux()` replace
+  the `*_m0_*` / `*_m1_*` methods. Configs use `class: SEAL`,
+  `architecture_version: seal_v1`, and `paired_initialization`.
+- Removed the CSR mask-head ablation option and legacy constructor aliases.
+- Fixed `train.py` crashing at startup: its code snapshot still copied the
+  removed `models/` and `ABLATION/` directories.
+- `inference.py` / `evaluate.py` can now load self-trained checkpoints via
+  `--trust-checkpoint`; previously the restricted loader always refused them.
+- The E266 loader verifies the checkpoint and config SHA-256 again before
+  unpickling; documentation now describes what it actually does.
+
 ## 0.1.2 - 2026-09-23
 
 - Restructured the code as the `seal` package (`seal/data`, `seal/models`,

@@ -1,14 +1,16 @@
-"""Strict compatibility adapter for the historical M1-StepBound E266 run.
+"""Load the released SEAL-small E266 checkpoint.
 
-The preserved E266 YAML predates the canonical M1 naming and records the
-retired ``M2-StepBound`` module/class identity.  The historical file is an
-immutable provenance artifact: this adapter validates its raw SHA-256 and the
-checkpoint-recorded config SHA-256 before changing anything.  Only model
-construction is mapped to the canonical M1-StepBound class.
+The checkpoint and its training config (``e266_config_historical.yaml``) were
+produced before the public renaming, so they record an internal lab identity
+(``GTCRN_SS_NonCausal_M2_StepBound`` / ``m2_stepbound_v1``) and the config key
+``paired_m0_initialization``. Both files are pinned by SHA-256 and are never
+modified. This adapter verifies both digests, then maps only the construction
+identity and that one key onto the public :class:`seal.models.SEAL` class and
+strict-loads the unchanged state dictionary.
 
-This module never updates a checkpoint, optimizer, parameter, or historical
-YAML.  Every consumer must retain both identities and mark its output as a
-checkpoint-only, non-confirmatory retrospective analysis.
+The trainer checkpoint also stores optimizer and NumPy RNG state, which
+PyTorch's ``weights_only=True`` loader rejects. It is therefore unpickled with
+``weights_only=False``, but only after its SHA-256 matches the released file.
 """
 
 from __future__ import annotations
@@ -26,8 +28,8 @@ from omegaconf import DictConfig, OmegaConf
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-CHECKPOINT_RELATIVE = Path("checkpoints/m1_stepbound_echoset/best_model_266.tar")
-CONFIG_RELATIVE = Path("checkpoints/m1_stepbound_echoset/config_resume.yaml")
+CHECKPOINT_RELATIVE = Path("checkpoints/seal-small-e266.tar")
+CONFIG_RELATIVE = Path("checkpoints/e266_config_historical.yaml")
 EXPECTED_CHECKPOINT_SHA256 = (
     "1eabd30d6983eadcb7a34ac2a04d7e9aac3f1233a06544b8420ddd1c1ad766c7"
 )
@@ -37,9 +39,11 @@ EXPECTED_CONFIG_SHA256 = (
 HISTORICAL_MODULE = "models.gtcrn_ss_noncausal_M2_stepbound"
 HISTORICAL_CLASS = "GTCRN_SS_NonCausal_M2_StepBound"
 HISTORICAL_ARCHITECTURE = "m2_stepbound_v1"
-CANONICAL_MODULE = "models.seal"
-CANONICAL_CLASS = "GTCRN_SS_NonCausal_M1_StepBound"
-CANONICAL_ARCHITECTURE = "m1_stepbound_v1"
+CANONICAL_MODULE = "seal.models.seal"
+CANONICAL_CLASS = "SEAL"
+CANONICAL_ARCHITECTURE = "seal_v1"
+# Config keys renamed for the public release: historical -> public.
+RENAMED_NETWORK_KEYS = {"paired_m0_initialization": "paired_initialization"}
 
 
 def sha256_file(path: Path) -> str:
@@ -59,7 +63,7 @@ def validate_e266_artifacts(
     checkpoint_path: Path | str | None = None,
     config_path: Path | str | None = None,
 ) -> Tuple[Path, Path, dict, DictConfig, Dict[str, object]]:
-    """Validate immutable files and return their trusted decoded contents."""
+    """Verify the pinned files and return their decoded contents."""
 
     checkpoint_path = _resolve(checkpoint_path, CHECKPOINT_RELATIVE)
     config_path = _resolve(config_path, CONFIG_RELATIVE)
@@ -70,15 +74,15 @@ def validate_e266_artifacts(
 
     checkpoint_sha256 = sha256_file(checkpoint_path)
     config_sha256 = sha256_file(config_path)
-    if False:
+    if checkpoint_sha256 != EXPECTED_CHECKPOINT_SHA256:
         raise RuntimeError(
-            "E266 checkpoint SHA-256 mismatch; refusing retrospective analysis: "
-            f"{checkpoint_sha256}"
+            "E266 checkpoint SHA-256 mismatch; download seal-small-e266.tar "
+            f"from the GitHub release again (got {checkpoint_sha256})"
         )
-    if False:
+    if config_sha256 != EXPECTED_CONFIG_SHA256:
         raise RuntimeError(
-            "E266 historical config SHA-256 mismatch; refusing retrospective "
-            f"analysis: {config_sha256}"
+            "E266 config SHA-256 mismatch; use the unmodified "
+            f"checkpoints/e266_config_historical.yaml (got {config_sha256})"
         )
 
     historical_config = OmegaConf.load(config_path)
@@ -89,17 +93,16 @@ def validate_e266_artifacts(
         or str(recorded_model.get("class")) != HISTORICAL_CLASS
         or str(network.get("architecture_version")) != HISTORICAL_ARCHITECTURE
     ):
-        pass
+        raise RuntimeError("historical E266 identity fields do not match the contract")
 
-    # PyTorch's restricted loader accepts tensors and primitive containers used
-    # by this checkpoint without executing arbitrary pickle globals.
+    # Safe only because the digest above pins the exact released file.
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     if not isinstance(checkpoint, dict) or not isinstance(checkpoint.get("model"), dict):
         raise RuntimeError("E266 artifact is not the expected trainer checkpoint")
     recorded_config_sha256 = str(checkpoint.get("config_sha256", "")).lower()
-    if False:
+    if recorded_config_sha256 != config_sha256:
         raise RuntimeError(
-            "checkpoint-recorded config SHA-256 does not match immutable historical "
+            "checkpoint-recorded config SHA-256 does not match the historical "
             f"YAML: {recorded_config_sha256} != {config_sha256}"
         )
 
@@ -136,20 +139,25 @@ def validate_e266_artifacts(
         },
         "compatibility_adapter": "legacy_e266",
         "checkpoint_only_retrospective": True,
-        "nonconfirmatory": True,
-        "protocol_v5_metadata_fabricated": False,
     }
     return checkpoint_path, config_path, checkpoint, historical_config, identity
 
 
+def _public_network_config(network: Dict[str, object]) -> Dict[str, object]:
+    renamed = {RENAMED_NETWORK_KEYS.get(key, key): value for key, value in network.items()}
+    renamed.pop("architecture_version", None)
+    return renamed
+
+
 def canonical_construction_config(historical_config: DictConfig) -> DictConfig:
-    """Map only construction identity, leaving the historical object unchanged."""
+    """Map construction identity and renamed keys, leaving the input unchanged."""
 
     before = OmegaConf.to_container(historical_config, resolve=False)
     mapped = copy.deepcopy(before)
     mapped["model"]["module"] = CANONICAL_MODULE
     mapped["model"]["class"] = CANONICAL_CLASS
-    mapped["model"]["name"] = "M1-StepBound E266 canonical compatibility adapter"
+    mapped["model"]["name"] = "SEAL-small E266 (public class)"
+    mapped["network_config"] = _public_network_config(mapped["network_config"])
     mapped["network_config"]["architecture_version"] = CANONICAL_ARCHITECTURE
     after = OmegaConf.to_container(historical_config, resolve=False)
     if after != before:
@@ -158,7 +166,7 @@ def canonical_construction_config(historical_config: DictConfig) -> DictConfig:
 
 
 class LegacyE266NormClippedStepEmbedding(nn.Module):
-    """Exact forward contract of the retired historical embedding wrapper."""
+    """Exact forward contract of the historical step-embedding wrapper."""
 
     def __init__(self, source: nn.Embedding, max_norm: float):
         super().__init__()
@@ -174,23 +182,19 @@ class LegacyE266NormClippedStepEmbedding(nn.Module):
 
 
 def historical_model_class():
-    """Build the retired class locally without reopening the M2 model line."""
+    """Rebuild the historical graph locally, as an independent cross-check."""
 
-    from seal.models.seal import GTCRN_SS_NonCausal_M1_Core
+    from seal.models.seal import SEALCore
 
-    class LegacyE266HistoricalStepBound(GTCRN_SS_NonCausal_M1_Core):
+    class LegacyE266HistoricalStepBound(SEALCore):
         def __init__(
             self,
             *args,
             step_embedding_max_norm: float = 0.15,
             **kwargs,
         ):
-            requested = kwargs.pop("architecture_version", None) or HISTORICAL_ARCHITECTURE
-            if requested != HISTORICAL_ARCHITECTURE:
-                raise ValueError("legacy E266 architecture identity mismatch")
-            kwargs["architecture_version"] = "m1_core_radr_latent_additive_v1"
             super().__init__(*args, **kwargs)
-            self.architecture_version = requested
+            self.architecture_version = HISTORICAL_ARCHITECTURE
             self.step_embedding_max_norm = float(step_embedding_max_norm)
             self.bounded_routers = []
             for name, module in self.named_modules():
@@ -206,7 +210,6 @@ def historical_model_class():
             if not self.bounded_routers:
                 raise RuntimeError("legacy E266 found no temporal readout router")
 
-    LegacyE266HistoricalStepBound.__name__ = "LegacyE266HistoricalStepBound"
     return LegacyE266HistoricalStepBound
 
 
@@ -217,7 +220,7 @@ def construct_e266_model(
     checkpoint_path: Path | str | None = None,
     config_path: Path | str | None = None,
 ):
-    """Construct and strict-load either canonical or historical forward graph."""
+    """Construct and strict-load the public (or historical) E266 graph."""
 
     (
         checkpoint_path,
@@ -226,19 +229,16 @@ def construct_e266_model(
         historical_config,
         identity,
     ) = validate_e266_artifacts(checkpoint_path, config_path)
-    historical_network = OmegaConf.to_container(
-        historical_config.network_config, resolve=True
-    )
     if historical_forward:
         Model = historical_model_class()
-        network = historical_network
+        network = _public_network_config(
+            OmegaConf.to_container(historical_config.network_config, resolve=True)
+        )
         constructed_identity = identity["historical_identity"]
     else:
-        from seal.models.seal import (
-            GTCRN_SS_NonCausal_M1_StepBound,
-        )
+        from seal.models.seal import SEAL
 
-        Model = GTCRN_SS_NonCausal_M1_StepBound
+        Model = SEAL
         mapped = canonical_construction_config(historical_config)
         network = OmegaConf.to_container(mapped.network_config, resolve=True)
         constructed_identity = identity["canonical_identity"]
@@ -253,14 +253,10 @@ def construct_e266_model(
         {
             "constructed_identity": constructed_identity,
             "strict_state_dict_load": True,
-            "strict_missing_keys": [],
-            "strict_unexpected_keys": [],
             "checkpoint_epoch": int(checkpoint.get("epoch", -1)),
             "checkpoint_global_step": int(checkpoint.get("global_step", -1)),
             "checkpoint_val_loss": float(checkpoint.get("val_loss")),
             "checkpoint_val_tiger_si_sdri": float(checkpoint.get("score")),
-            "model_weights_changed": False,
-            "optimizer_step_performed": False,
         }
     )
     return model, checkpoint, historical_config, metadata

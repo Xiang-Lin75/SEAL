@@ -1,8 +1,8 @@
-"""Architectural invariant tests for the lean M1-Core separator.
+"""Architectural invariant tests for the SEAL separator.
 
 Run from the repository root with::
 
-    python tests/test_m1_model.py
+    python -m unittest tests.test_model
 
 Tiny CPU models cover numerical/gradient invariants.  One final smoke test
 builds the production EchoSet configuration and uses the same pinned ptflops
@@ -37,19 +37,14 @@ except ModuleNotFoundError as error:
 
 
 if torch is not None:
-    from seal.models.seal import (
-        BaselineCompatibleSAFR,
-        ConservedLatentAdditiveResidualHead,
-        ConservedSpectralResidualHead,
-        FullBandObservationAdapter,
-        GTCRN_SS_NonCausal_M1_Core,
-        GTCRN_SS_NonCausal_M1_StepBound,
-        RefinementAwareDynamicRouter,
-    )
-    from seal.models.seal import (
+    from seal.models import SEAL, SEALBaseline, SEALCore
+    from seal.models.heads import (
         ConservationStructuredLatentAtomHead,
-        GTCRN_SS_NonCausal_M0_SharedRecursive_MoE_Latent,
+        ConservedLatentAdditiveResidualHead,
+        FullBandObservationAdapter,
     )
+    from seal.models.routing import RefinementAwareDynamicRouter
+    from seal.models.separator import StepAwareFusion
 
 
 def _iter_tensors(value: Any) -> Iterator["torch.Tensor"]:
@@ -74,10 +69,10 @@ def _has_nonzero_finite_gradient(parameters) -> bool:
 
 @unittest.skipIf(
     torch is None,
-    f"M1 runtime dependencies are not installed: {_DEPENDENCY_ERROR}",
+    f"SEAL runtime dependencies are not installed: {_DEPENDENCY_ERROR}",
 )
-class TestM1Model(unittest.TestCase):
-    """Fast tests that lock M1's implemented graph, not future candidates."""
+class TestSEALModel(unittest.TestCase):
+    """Fast tests that lock the implemented SEAL graph."""
 
     INPUT_SAMPLES = 256
     MODEL_KWARGS = {
@@ -103,7 +98,7 @@ class TestM1Model(unittest.TestCase):
     def _make_model(cls, **overrides):
         kwargs = dict(cls.MODEL_KWARGS)
         kwargs.update(overrides)
-        return GTCRN_SS_NonCausal_M1_Core(**kwargs)
+        return SEALCore(**kwargs)
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -159,7 +154,7 @@ class TestM1Model(unittest.TestCase):
                 handle.remove()
         cls.aux = cls.model._last_aux
         if cls.aux is None:
-            raise AssertionError("M1 forward must retain model._last_aux")
+            raise AssertionError("forward must retain model._last_aux")
 
     def test_01_refinement_is_shared_and_deferred_candidates_are_absent(self) -> None:
         one_step = self._make_model(num_refinement_steps=1)
@@ -177,7 +172,7 @@ class TestM1Model(unittest.TestCase):
             sum(parameter.numel() for parameter in one_step.parameters()),
             sum(parameter.numel() for parameter in four_steps.parameters()),
         )
-        diagnostics = self.model.get_m1_diagnostics()
+        diagnostics = self.model.get_diagnostics()
         self.assertEqual(diagnostics["shared_cell_count"], 1)
         self.assertFalse(diagnostics["recurrent_source_memory_present"])
         self.assertFalse(diagnostics["frequency_attention_present"])
@@ -192,7 +187,7 @@ class TestM1Model(unittest.TestCase):
         for deferred_name in deferred_names:
             self.assertFalse(
                 any(deferred_name in name for name in module_names),
-                f"Deferred module {deferred_name!r} unexpectedly entered M1-Core",
+                f"Deferred module {deferred_name!r} unexpectedly entered SEALCore",
             )
 
     def test_02_forward_shape_finiteness_and_identity_strength_separation(self) -> None:
@@ -261,73 +256,6 @@ class TestM1Model(unittest.TestCase):
                 "peak_group_residual_to_local_reference_ratio"
             ].item(),
             self.aux["latent_additive_residual_scale"].item() + 1e-5,
-        )
-
-    def test_04_csr_speech_queries_are_opposites_and_swap_equivariant(self) -> None:
-        torch.manual_seed(13)
-        head = ConservedSpectralResidualHead(
-            feature_channels=8,
-            query_dim=8,
-        ).eval()
-        # Make the residual branch non-zero so equivariance covers both the
-        # responsibility base and the shared complex edge, not only init zeros.
-        with torch.no_grad():
-            head.edge_output.weight.normal_(mean=0.0, std=0.1)
-            head.edge_output.bias.normal_(mean=0.0, std=0.1)
-        queries = head._queries().detach()
-        torch.testing.assert_close(queries[0], -queries[1], rtol=0.0, atol=1e-7)
-        torch.testing.assert_close(
-            queries.norm(dim=-1),
-            torch.ones(3),
-            rtol=1e-6,
-            atol=1e-6,
-        )
-
-        feature = torch.randn(2, 8, 5, 9)
-        mixture_spec = torch.randn(2, 2, 5, 9)
-        valid = torch.tensor(
-            [[True, True, True, True, True], [True, True, True, False, False]]
-        )
-        with torch.inference_mode():
-            _, original = head(feature, mixture_spec, valid_time_mask=valid)
-            head.speech_seed.mul_(-1.0)
-            _, swapped = head(feature, mixture_spec, valid_time_mask=valid)
-
-        torch.testing.assert_close(
-            swapped["responsibilities"][:, 0],
-            original["responsibilities"][:, 1],
-            rtol=1e-6,
-            atol=1e-6,
-        )
-        torch.testing.assert_close(
-            swapped["responsibilities"][:, 1],
-            original["responsibilities"][:, 0],
-            rtol=1e-6,
-            atol=1e-6,
-        )
-        torch.testing.assert_close(
-            swapped["grouped_specs"][:, 0],
-            original["grouped_specs"][:, 1],
-            rtol=1e-6,
-            atol=1e-6,
-        )
-        torch.testing.assert_close(
-            swapped["grouped_specs"][:, 1],
-            original["grouped_specs"][:, 0],
-            rtol=1e-6,
-            atol=1e-6,
-        )
-        torch.testing.assert_close(
-            swapped["grouped_specs"][:, 2],
-            original["grouped_specs"][:, 2],
-            rtol=1e-6,
-            atol=1e-6,
-        )
-        torch.testing.assert_close(
-            swapped["grouped_specs"].sum(dim=1),
-            mixture_spec,
-            rtol=1e-6,
-            atol=1e-6,
         )
 
     def test_05_variable_length_batch_is_padding_invariant(self) -> None:
@@ -413,7 +341,7 @@ class TestM1Model(unittest.TestCase):
         self.assertEqual(first_aux["observation_gate_abs_max"].item(), 0.0)
         self.assertEqual(first_aux["observation_injection_rms"].item(), 0.0)
 
-    def test_09_backward_reaches_all_m1_roles_without_unused_parameters(self) -> None:
+    def test_09_backward_reaches_all_roles_without_unused_parameters(self) -> None:
         torch.manual_seed(23)
         model = self._make_model(num_refinement_steps=2).train()
         waveform = (0.05 * torch.randn(1, self.INPUT_SAMPLES)).requires_grad_(True)
@@ -431,7 +359,7 @@ class TestM1Model(unittest.TestCase):
             for name, parameter in model.named_parameters()
             if parameter.requires_grad and parameter.grad is None
         ]
-        self.assertEqual(missing, [], f"M1 left trainable parameters unused: {missing}")
+        self.assertEqual(missing, [], f"SEAL left trainable parameters unused: {missing}")
         role_prefixes = (
             "separator.cell.",
             "separator.fusion.",
@@ -483,26 +411,17 @@ class TestM1Model(unittest.TestCase):
                 f"R=1 SAFR parameter {name} lacked its zero graph anchor",
             )
 
-    def test_11_diagnostic_alias_and_clear_contract(self) -> None:
-        m1 = self.model.get_m1_diagnostics()
-        m0_alias = self.model.get_m0_diagnostics()
-        self.assertEqual(m1.keys(), m0_alias.keys())
-        self.assertEqual(
-            m1["architecture_version"],
-            "m1_core_radr_latent_additive_v1",
-        )
-        self.assertEqual(m1["mask_head_type"], "latent_additive")
-        self.assertTrue(m1["latent_atoms_present"])
-        self.assertEqual(m1["num_latent_atoms"], 6)
+    def test_11_diagnostics_and_clear_contract(self) -> None:
+        diagnostics = self.model.get_diagnostics()
+        self.assertEqual(diagnostics["architecture_version"], "seal_core_v1")
+        self.assertEqual(diagnostics["mask_head_type"], "latent_additive")
+        self.assertTrue(diagnostics["latent_atoms_present"])
+        self.assertEqual(diagnostics["num_latent_atoms"], 6)
         model = self._make_model(num_refinement_steps=1).eval()
         with torch.inference_mode():
             model(self.waveform)
         self.assertIsNotNone(model._last_aux)
-        model.clear_m1_aux()
-        self.assertIsNone(model._last_aux)
-        with torch.inference_mode():
-            model(self.waveform)
-        model.clear_m0_aux()
+        model.clear_aux()
         self.assertIsNone(model._last_aux)
 
     def test_12_production_parameter_and_tiger_mac_budget_smoke(self) -> None:
@@ -512,7 +431,7 @@ class TestM1Model(unittest.TestCase):
             / "seal_small_echoset.yaml"
         )
         config = OmegaConf.load(config_path)
-        model = GTCRN_SS_NonCausal_M1_StepBound(**config["network_config"]).cpu().eval()
+        model = SEAL(**config["network_config"]).cpu().eval()
         total = sum(parameter.numel() for parameter in model.parameters())
         trainable = sum(
             parameter.numel()
@@ -552,7 +471,7 @@ class TestM1Model(unittest.TestCase):
         """Prevent recurrence of SAFR's bilinear zero-times-zero deadlock."""
 
         torch.manual_seed(37)
-        saf_r = BaselineCompatibleSAFR(
+        saf_r = StepAwareFusion(
             channels=8,
             fusion_dim=8,
             max_refinement_steps=4,
@@ -721,25 +640,25 @@ class TestM1Model(unittest.TestCase):
             for handle in handles:
                 handle.remove()
 
-    def test_15_paired_initialization_copies_only_compatible_m0_roles(self) -> None:
-        """Same-seed M0/M1 runs must share semantically identical operators."""
+    def test_15_paired_initialization_copies_only_compatible_baseline_roles(self) -> None:
+        """Same-seed baseline/SEAL graphs must share semantically identical operators."""
 
-        m0_kwargs = dict(self.MODEL_KWARGS)
-        m0_kwargs.update(
+        baseline_kwargs = dict(self.MODEL_KWARGS)
+        baseline_kwargs.update(
             {
                 "num_refinement_steps": 4,
-                "architecture_version": "m0_trr_shar_v1",
+                "architecture_version": "seal_baseline_v1",
                 "num_latent_atoms": 6,
                 "atom_residual_scale": 0.1,
             }
         )
         torch.manual_seed(47)
-        m0 = GTCRN_SS_NonCausal_M0_SharedRecursive_MoE_Latent(**m0_kwargs)
+        baseline = SEALBaseline(**baseline_kwargs)
         torch.manual_seed(47)
-        m1 = self._make_model(
+        core = self._make_model(
             num_refinement_steps=4,
             max_refinement_steps=4,
-            paired_m0_initialization=True,
+            paired_initialization=True,
         )
 
         def assert_same_state(left, right, role: str) -> None:
@@ -755,11 +674,11 @@ class TestM1Model(unittest.TestCase):
                     msg=lambda message, key=key: f"{role}.{key}: {message}",
                 )
 
-        assert_same_state(m0.encoder, m1.encoder, "encoder")
-        assert_same_state(m0.decoder, m1.decoder, "decoder")
+        assert_same_state(baseline.encoder, core.encoder, "encoder")
+        assert_same_state(baseline.decoder, core.decoder, "decoder")
         assert_same_state(
-            m0.separator.anchor_fuse,
-            m1.separator.fusion.baseline_fuse,
+            baseline.separator.anchor_fuse,
+            core.separator.fusion.baseline_fuse,
             "baseline_fuse",
         )
         for role in (
@@ -772,17 +691,17 @@ class TestM1Model(unittest.TestCase):
             "attn",
         ):
             assert_same_state(
-                getattr(m0.separator.cell, role),
-                getattr(m1.separator.cell, role),
+                getattr(baseline.separator.cell, role),
+                getattr(core.separator.cell, role),
                 role,
             )
         assert_same_state(
-            m0.separator.cell.temporal_readout.experts,
-            m1.separator.cell.temporal_readout.experts,
+            baseline.separator.cell.temporal_readout.experts,
+            core.separator.cell.temporal_readout.experts,
             "experts",
         )
-        m0_router = m0.separator.cell.temporal_readout.router
-        m1_router = m1.separator.cell.temporal_readout.router
+        baseline_router = baseline.separator.cell.temporal_readout.router
+        core_router = core.separator.cell.temporal_readout.router
         for role in (
             "local_norm",
             "local_projection",
@@ -794,34 +713,34 @@ class TestM1Model(unittest.TestCase):
             "global_projection",
         ):
             assert_same_state(
-                getattr(m0_router, role),
-                getattr(m1_router, role),
+                getattr(baseline_router, role),
+                getattr(core_router, role),
                 f"router.{role}",
             )
         torch.testing.assert_close(
-            m0_router.prototypes,
-            m1_router.prototypes,
+            baseline_router.prototypes,
+            core_router.prototypes,
             rtol=0.0,
             atol=0.0,
         )
         torch.testing.assert_close(
-            m0_router.raw_temperature,
-            m1_router.raw_temperature,
+            baseline_router.raw_temperature,
+            core_router.raw_temperature,
             rtol=0.0,
             atol=0.0,
         )
         for role in ("pre", "occupancy_out", "ownership_out", "residual_out"):
             assert_same_state(
-                getattr(m0.mask, role),
-                getattr(m1.mask, role),
+                getattr(baseline.mask, role),
+                getattr(core.mask, role),
                 f"mask.{role}",
             )
 
-    def test_16_m0_latent_start_and_additive_cancellation_escape(self) -> None:
-        """Start exactly from M0 speech masks, then learn an additive escape."""
+    def test_16_baseline_latent_start_and_additive_cancellation_escape(self) -> None:
+        """Start exactly from the baseline speech masks, then learn an additive escape."""
 
         torch.manual_seed(53)
-        m0_head = ConservationStructuredLatentAtomHead(
+        baseline_head = ConservationStructuredLatentAtomHead(
             feature_channels=8,
             num_sources=2,
             num_latent_atoms=6,
@@ -838,7 +757,7 @@ class TestM1Model(unittest.TestCase):
             additive_residual_scale_init=0.1,
             additive_residual_scale_max=0.5,
         ).train()
-        head.copy_m0_mask_initialization(m0_head)
+        head.copy_baseline_mask_initialization(baseline_head)
         feature = torch.randn(2, 8, 5, 9, requires_grad=True)
         mixture_spec = torch.randn(2, 2, 5, 9)
         valid = torch.tensor(
@@ -846,11 +765,11 @@ class TestM1Model(unittest.TestCase):
         )
 
         with torch.no_grad():
-            _, m0_aux = m0_head(feature.detach(), mixture_spec, valid)
+            _, baseline_aux = baseline_head(feature.detach(), mixture_spec, valid)
         speech, initial = head(feature, mixture_spec, valid)
         torch.testing.assert_close(
             speech,
-            m0_aux["grouped_specs"][:, :2],
+            baseline_aux["grouped_specs"][:, :2],
             rtol=0.0,
             atol=0.0,
         )
@@ -908,7 +827,7 @@ class TestM1Model(unittest.TestCase):
         self.assertGreater(
             (
                 corrected["grouped_specs"][:, :2]
-                - m0_aux["grouped_specs"][:, :2]
+                - baseline_aux["grouped_specs"][:, :2]
             ).abs().sum().item(),
             0.0,
         )
@@ -939,7 +858,7 @@ class TestM1Model(unittest.TestCase):
         """A local additive residual can recover speech where ``M * X`` cannot."""
 
         torch.manual_seed(61)
-        m0_head = ConservationStructuredLatentAtomHead(
+        baseline_head = ConservationStructuredLatentAtomHead(
             feature_channels=8,
             num_sources=2,
             num_latent_atoms=6,
@@ -955,10 +874,10 @@ class TestM1Model(unittest.TestCase):
             additive_residual_scale_init=0.1,
             additive_residual_scale_max=0.5,
         ).train()
-        head.copy_m0_mask_initialization(m0_head)
+        head.copy_baseline_mask_initialization(baseline_head)
 
         # The centre mixture TF bin is an exact cancellation (X[t, f] = 0),
-        # while a bin inside its 3x3 neighbourhood carries energy.  Every M0
+        # while a bin inside its 3x3 neighbourhood carries energy.  Every baseline
         # output remains M_k * X and must therefore be exactly zero at centre.
         centre = (1, 2)
         mixture_spec = torch.zeros(1, 2, 3, 5)
@@ -968,7 +887,7 @@ class TestM1Model(unittest.TestCase):
         valid = torch.ones(1, 3, dtype=torch.bool)
 
         with torch.no_grad():
-            m0_speech, m0_aux = m0_head(feature.detach(), mixture_spec, valid)
+            baseline_speech, baseline_aux = baseline_head(feature.detach(), mixture_spec, valid)
             initial_speech, initial_aux = head(
                 feature.detach(),
                 mixture_spec,
@@ -977,13 +896,13 @@ class TestM1Model(unittest.TestCase):
         self.assertEqual(tuple(initial_speech.shape), (1, 2, 2, 3, 5))
         self.assertEqual(
             torch.count_nonzero(
-                m0_aux["grouped_specs"][0, :, :, centre[0], centre[1]]
+                baseline_aux["grouped_specs"][0, :, :, centre[0], centre[1]]
             ).item(),
             0,
         )
         self.assertEqual(
             torch.count_nonzero(
-                m0_speech[0, :, :, centre[0], centre[1]]
+                baseline_speech[0, :, :, centre[0], centre[1]]
             ).item(),
             0,
         )
