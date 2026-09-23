@@ -76,6 +76,11 @@ export ECHOSET_ROOT=/path/to/EchoSet
 python train.py -C configs/seal_small_echoset.yaml -D 0
 ```
 
+`-D` takes GPU ids (`-D 0,1` trains with DDP on two GPUs) or `cpu` for a slow
+single-process run. Runs are written to `exp/seal_small_echoset_<run id>/`; to
+continue an interrupted run, set `trainer.resume: true` and
+`trainer.resume_datetime: <run id>` in the config and rerun the same command.
+
 ### Evaluate with EchoSet
 
 ```bash

@@ -243,7 +243,7 @@ def _run_worker(rank, config, args):
         dist.barrier()
 
     args.rank = rank
-    args.device = torch.device("cuda", rank)
+    args.device = torch.device("cpu") if args.use_cpu else torch.device("cuda", rank)
     reproducibility_enabled = "reproducibility" in config
     reproducibility_config = config.get("reproducibility", {}) or {}
     init_seed = int(reproducibility_config.get("init_seed", SEED))
@@ -2202,7 +2202,12 @@ class Trainer:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-C", "--config", required=True)
-    parser.add_argument("-D", "--device", default="0")
+    parser.add_argument(
+        "-D",
+        "--device",
+        default="0",
+        help="comma-separated GPU ids (e.g. 0 or 0,1), or 'cpu' for a slow single-process run",
+    )
     parser.add_argument(
         "--master-port",
         type=int,
@@ -2225,9 +2230,13 @@ if __name__ == "__main__":
         + uuid.uuid4().hex[:8]
     )
 
-    gpu_ids = [int(i) for i in str(args.device).split(",")]
-    args.world_size = len(gpu_ids)
-    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_ids))
+    args.use_cpu = str(args.device).strip().lower() == "cpu"
+    if args.use_cpu:
+        args.world_size = 1
+    else:
+        gpu_ids = [int(i) for i in str(args.device).split(",")]
+        args.world_size = len(gpu_ids)
+        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_ids))
     config = OmegaConf.load(args.config)
     if args.world_size > 1:
         torch.multiprocessing.spawn(run, args=(config, args), nprocs=args.world_size, join=True)

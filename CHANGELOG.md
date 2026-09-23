@@ -19,6 +19,10 @@ Model outputs, initialization, parameter count, and MACs are bit-identical to
   `--trust-checkpoint`; previously the restricted loader always refused them.
 - The E266 loader verifies the checkpoint and config SHA-256 again before
   unpickling; documentation now describes what it actually does.
+- `train.py -D cpu` runs the trainer without a GPU.
+- New `tests/test_train_smoke.py` runs the documented workflow on every CI
+  push: train one epoch on CPU, resume to a second epoch, then separate with
+  `inference.py`. It fails if the trainer cannot start from a fresh clone.
 
 ## 0.1.2 - 2026-09-23
 
